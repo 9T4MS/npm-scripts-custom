@@ -1,0 +1,625 @@
+/* Reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  color: var(--vscode-foreground);
+  background: var(--vscode-sideBar-background);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+:root {
+  --script-icon-size: 17px;
+  --icon-btn-size: 18px;
+  --icon-glyph-size: 14px;
+  --script-icon-prettier-url: url('./icons/prettier.svg');
+  --script-icon-prisma-url: url('./icons/prisma.svg');
+  --script-icon-eslint-url: url('./icons/eslint.svg');
+  --script-icon-vitest-url: url('./icons/vitest.svg');
+  --script-icon-jest-url: url('./icons/jest.svg');
+  --script-icon-webpack-url: url('./icons/webpack.svg');
+  --script-icon-vite-url: url('./icons/vite.svg');
+  --script-icon-typescript-url: url('./icons/typescript.svg');
+  --script-icon-docker-url: url('./icons/docker.svg');
+  --script-icon-playwright-url: url('./icons/playwright.svg');
+  --script-icon-storybook-url: url('./icons/storybook.svg');
+  --script-icon-graphql-url: url('./icons/graphql.svg');
+  --script-icon-expo-url: url('./icons/expo.svg');
+  --script-icon-eas-url: url('./icons/eas.svg');
+  --script-icon-tailwind-url: url('./icons/tailwind.svg');
+  --script-icon-deploy-url: url('./icons/deploy.svg');
+  --script-icon-watch-url: url('./icons/watch.svg');
+  --script-icon-preview-url: url('./icons/preview.svg');
+  --script-icon-database-url: url('./icons/database.svg');
+  --script-icon-nest-url: url('./icons/nest.svg');
+  --script-icon-shell-url: url('./icons/shell.svg');
+  --script-icon-clean-url: url('./icons/clean.svg');
+  --script-icon-i18n-url: url('./icons/i18n.svg');
+  --script-icon-npm-url: url('./icons/npm.svg');
+  --script-icon-pnpm-url: url('./icons/pnpm.svg');
+  --script-icon-yarn-url: url('./icons/yarn.svg');
+  --script-icon-bun-url: url('./icons/bun.svg');
+  --script-icon-claude-code-url: url('./icons/claude-code.svg');
+  --script-icon-claude-url: url('./icons/claude.svg');
+  --script-icon-script-url: url('./icons/script.svg');
+  --script-icon-prettier-color: color-mix(in srgb, var(--vscode-charts-purple) 78%, var(--vscode-foreground));
+  --script-icon-prisma-color: color-mix(in srgb, var(--vscode-symbolIcon-classForeground, var(--vscode-foreground)) 82%, var(--vscode-foreground));
+  --script-icon-eslint-color: color-mix(in srgb, var(--vscode-charts-blue) 72%, var(--vscode-foreground));
+  --script-icon-vitest-color: color-mix(in srgb, var(--vscode-charts-green) 78%, var(--vscode-foreground));
+  --script-icon-jest-color: color-mix(in srgb, var(--vscode-charts-orange) 78%, var(--vscode-foreground));
+  --script-icon-webpack-color: color-mix(in srgb, var(--vscode-charts-blue) 75%, var(--vscode-foreground));
+  --script-icon-vite-color: color-mix(in srgb, var(--vscode-charts-purple) 75%, var(--vscode-foreground));
+  --script-icon-typescript-color: color-mix(in srgb, var(--vscode-textLink-foreground) 85%, var(--vscode-foreground));
+  --script-icon-docker-color: color-mix(in srgb, var(--vscode-charts-blue) 88%, var(--vscode-foreground));
+  --script-icon-playwright-color: color-mix(in srgb, var(--vscode-charts-green) 88%, var(--vscode-foreground));
+  --script-icon-storybook-color: color-mix(in srgb, var(--vscode-charts-pink, var(--vscode-charts-purple)) 80%, var(--vscode-foreground));
+  --script-icon-graphql-color: color-mix(in srgb, var(--vscode-charts-purple) 86%, var(--vscode-foreground));
+  --script-icon-tailwind-color: color-mix(in srgb, var(--vscode-charts-blue) 82%, var(--vscode-foreground));
+  --script-icon-deploy-color: color-mix(in srgb, var(--vscode-terminal-ansiGreen, var(--vscode-charts-green)) 82%, var(--vscode-foreground));
+  --script-icon-watch-color: color-mix(in srgb, var(--vscode-terminal-ansiCyan, var(--vscode-charts-blue)) 82%, var(--vscode-foreground));
+  --script-icon-preview-color: color-mix(in srgb, var(--vscode-terminal-ansiMagenta, var(--vscode-charts-purple)) 84%, var(--vscode-foreground));
+  --script-icon-database-color: color-mix(in srgb, var(--vscode-terminal-ansiYellow, var(--vscode-charts-orange)) 82%, var(--vscode-foreground));
+  --script-icon-clean-color: color-mix(in srgb, var(--vscode-descriptionForeground) 82%, var(--vscode-foreground));
+  --script-icon-i18n-color: color-mix(in srgb, var(--vscode-charts-orange) 82%, var(--vscode-foreground));
+  --script-icon-npm-color: color-mix(in srgb, var(--vscode-charts-red) 88%, var(--vscode-foreground));
+  --script-icon-pnpm-color: color-mix(in srgb, var(--vscode-charts-orange) 88%, var(--vscode-foreground));
+  --script-icon-yarn-color: color-mix(in srgb, var(--vscode-charts-blue) 88%, var(--vscode-foreground));
+  --script-icon-bun-color: color-mix(in srgb, var(--vscode-foreground) 78%, var(--vscode-descriptionForeground));
+  --script-icon-script-color: color-mix(in srgb, var(--vscode-descriptionForeground) 72%, var(--vscode-foreground));
+  --icon-btn-color: var(--vscode-descriptionForeground);
+  --icon-open-hover-color: var(--vscode-charts-green);
+  --icon-run-hover-color: var(--vscode-charts-blue);
+  --icon-open-tab-hover-color: var(--vscode-charts-purple);
+  --icon-run-secondary-hover-color: var(--vscode-terminal-ansiCyan, var(--vscode-charts-blue));
+  --icon-btn-hover-bg: color-mix(in srgb, var(--vscode-list-hoverBackground) 82%, transparent);
+  --favorite-active-color: var(--vscode-terminal-ansiYellow, #e8a317);
+  --section-drag-over-color: var(--vscode-focusBorder, #007acc);
+}
+
+body.vscode-dark,
+body.vscode-high-contrast {
+  --script-icon-prisma-url: url('./icons/prisma-dark.svg');
+  --script-icon-clean-url: url('./icons/clean-dark.svg');
+  --script-icon-pnpm-url: url('./icons/pnpm-dark.svg');
+  --script-icon-webpack-url: url('./icons/webpack-dark.svg');
+}
+
+body.vscode-light,
+body.vscode-high-contrast-light {
+  --script-icon-prisma-url: url('./icons/prisma-light.svg');
+  --script-icon-clean-url: url('./icons/clean-light.svg');
+  --script-icon-pnpm-url: url('./icons/pnpm-light.svg');
+  --script-icon-webpack-url: url('./icons/webpack-light.svg');
+}
+
+/* Top toolbar */
+#toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-widget-border));
+}
+
+#toolbar[hidden] {
+  display: none;
+}
+
+#env-name-input {
+  width: 150px;
+  max-width: 45%;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border, var(--vscode-widget-border));
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 18px;
+  padding: 2px 6px;
+}
+
+#env-name-input:focus {
+  outline: 1px solid var(--vscode-focusBorder, #007acc);
+  outline-offset: 0;
+}
+
+#env-name-input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Tab bar */
+#tab-bar {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 6px;
+  gap: 4px;
+  border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-widget-border));
+  background: var(--vscode-sideBar-background);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+#tab-bar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.tab {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  cursor: grab;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.2px;
+  color: var(--vscode-tab-inactiveForeground, var(--vscode-foreground));
+  border-bottom: 2px solid transparent;
+  border-radius: 6px 6px 0 0;
+  opacity: 0.7;
+  user-select: none;
+  transition: opacity 0.12s ease, background-color 0.12s ease;
+}
+
+.tab.draggable:active,
+.tab.dragging {
+  cursor: grabbing;
+}
+
+.tab:hover {
+  opacity: 1;
+  background: var(--vscode-list-hoverBackground);
+}
+
+.tab.active {
+  opacity: 1;
+  color: var(--vscode-tab-activeForeground, var(--vscode-foreground));
+  border-bottom-color: var(--vscode-focusBorder, #007acc);
+}
+
+.tab.drag-over {
+  border-bottom-color: var(--vscode-focusBorder, #007acc);
+  opacity: 1;
+}
+
+/* Content area */
+#content {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Section header (favorites grouping) */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 8px 12px 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--vscode-descriptionForeground);
+  font-weight: 600;
+}
+
+.section-header.draggable {
+  cursor: grab;
+  user-select: none;
+}
+
+.section-header.draggable:active {
+  cursor: grabbing;
+}
+
+.section-header.drag-over {
+  color: var(--section-drag-over-color);
+}
+
+.section-header-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.section-header-quick-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+.section-header:hover .section-header-quick-actions,
+.section-header:focus-within .section-header-quick-actions,
+.section-header-quick-actions:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.section-header-action {
+  width: 16px;
+  height: 16px;
+  opacity: 0.92;
+}
+
+.section-header-spacer {
+  flex: 1;
+  min-width: 0;
+}
+
+.section-header-handle {
+  flex-shrink: 0;
+  opacity: 1;
+  color: var(--vscode-descriptionForeground);
+  letter-spacing: -1px;
+  transition: opacity 0.12s ease, color 0.12s ease;
+}
+
+.section-header.drag-over .section-header-handle {
+  color: var(--section-drag-over-color);
+}
+
+/* Script row */
+.script-row {
+  display: flex;
+  align-items: center;
+  padding: 4px 12px;
+  cursor: pointer;
+  gap: 10px;
+}
+
+.script-row:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.script-row:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, #007acc);
+  outline-offset: -1px;
+}
+
+/* Left-side script identity (name + related icons) */
+.script-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.script-icon {
+  width: var(--script-icon-size);
+  height: var(--script-icon-size);
+  display: inline-block;
+  flex-shrink: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.script-icon--prettier {
+  background-image: var(--script-icon-prettier-url);
+}
+
+.script-icon--prisma {
+  background-image: var(--script-icon-prisma-url);
+}
+
+.script-icon--eslint {
+  background-image: var(--script-icon-eslint-url);
+}
+
+.script-icon--vitest {
+  background-image: var(--script-icon-vitest-url);
+}
+
+.script-icon--jest {
+  background-image: var(--script-icon-jest-url);
+}
+
+.script-icon--webpack {
+  background-image: var(--script-icon-webpack-url);
+}
+
+.script-icon--vite {
+  background-image: var(--script-icon-vite-url);
+}
+
+.script-icon--typescript {
+  background-image: var(--script-icon-typescript-url);
+}
+
+.script-icon--docker {
+  background-image: var(--script-icon-docker-url);
+}
+
+.script-icon--playwright {
+  background-image: var(--script-icon-playwright-url);
+}
+
+.script-icon--storybook {
+  background-image: var(--script-icon-storybook-url);
+}
+
+.script-icon--graphql {
+  background-image: var(--script-icon-graphql-url);
+}
+
+.script-icon--expo {
+  background-image: var(--script-icon-expo-url);
+}
+
+.script-icon--eas {
+  background-image: var(--script-icon-eas-url);
+}
+
+.script-icon--tailwind {
+  background-image: var(--script-icon-tailwind-url);
+}
+
+.script-icon--deploy {
+  background-image: var(--script-icon-deploy-url);
+}
+
+.script-icon--watch {
+  background-image: var(--script-icon-watch-url);
+}
+
+.script-icon--preview {
+  background-image: var(--script-icon-preview-url);
+}
+
+.script-icon--database {
+  background-image: var(--script-icon-database-url);
+}
+
+.script-icon--nest {
+  background-image: var(--script-icon-nest-url);
+}
+
+.script-icon--shell {
+  background-image: var(--script-icon-shell-url);
+}
+
+.script-icon--clean {
+  background-image: var(--script-icon-clean-url);
+}
+
+.script-icon--i18n {
+  background-image: var(--script-icon-i18n-url);
+}
+
+.script-icon--npm {
+  background-image: var(--script-icon-npm-url);
+}
+
+.script-icon--pnpm {
+  background-image: var(--script-icon-pnpm-url);
+}
+
+.script-icon--yarn {
+  background-image: var(--script-icon-yarn-url);
+}
+
+.script-icon--bun {
+  background-image: var(--script-icon-bun-url);
+}
+
+.script-icon--claude-code {
+  background-image: var(--script-icon-claude-code-url);
+}
+
+.script-icon--claude {
+  background-image: var(--script-icon-claude-url);
+}
+
+.script-icon--script {
+  background-image: var(--script-icon-script-url);
+}
+
+.custom-favorite-row--first {
+  margin-top: 4px;
+}
+
+/* Right-side action buttons */
+.script-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(2px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.script-row:hover .script-actions,
+.script-row:focus-within .script-actions,
+.script-actions:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.script-actions.favorite-pinned {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.script-actions.favorite-pinned .icon-btn:not(.action-favorite) {
+  display: none;
+}
+
+.script-row.favorite-pinned:hover .script-actions.favorite-pinned .icon-btn:not(.action-favorite),
+.script-row.favorite-pinned:focus-within .script-actions.favorite-pinned .icon-btn:not(.action-favorite),
+.script-actions.favorite-pinned:focus-within .icon-btn:not(.action-favorite) {
+  display: inline-flex;
+}
+
+.icon-btn {
+  width: var(--icon-btn-size);
+  height: var(--icon-btn-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  color: var(--icon-btn-color);
+  opacity: 0.82;
+  transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease, transform 0.06s ease;
+}
+
+.icon-btn:hover {
+  opacity: 1;
+  background: var(--icon-btn-hover-bg);
+}
+
+.icon-btn:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--vscode-focusBorder) 70%, transparent);
+  outline-offset: 1px;
+  opacity: 1;
+}
+
+.icon-btn:active {
+  transform: translateY(1px);
+}
+
+.icon-btn svg {
+  width: var(--icon-glyph-size);
+  height: var(--icon-glyph-size);
+  display: block;
+}
+
+.action-open-script:hover,
+.action-open-script:focus-visible {
+  color: var(--icon-open-hover-color);
+}
+
+.action-run-external:hover,
+.action-run-external:focus-visible {
+  color: var(--icon-run-hover-color);
+}
+
+.action-open-external-tab-copy-command:hover,
+.action-open-external-tab-copy-command:focus-visible {
+  color: var(--icon-open-tab-hover-color);
+}
+
+.action-run-secondary:hover,
+.action-run-secondary:focus-visible {
+  color: var(--icon-run-secondary-hover-color);
+}
+
+.star-btn.active {
+  color: var(--favorite-active-color);
+  opacity: 1;
+}
+
+/* Script name */
+.script-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+/* Empty state */
+.empty-state {
+  padding: 24px 12px;
+  text-align: center;
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}
+
+.context-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 220px;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+  background: var(--vscode-menu-background, var(--vscode-editorWidget-background));
+  box-shadow: 0 8px 24px color-mix(in srgb, #000 30%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.context-menu-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--vscode-foreground);
+  border-radius: 6px;
+  font-size: 12px;
+  text-align: left;
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.context-menu-item:hover,
+.context-menu-item:focus-visible {
+  background: var(--vscode-list-hoverBackground);
+  outline: none;
+}
+
+.context-menu-item:disabled,
+.context-menu-item.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.context-menu-item:disabled:hover,
+.context-menu-item.disabled:hover {
+  background: transparent;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%) translateY(8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.14s ease, transform 0.14s ease;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--vscode-notifications-foreground, var(--vscode-foreground));
+  background: var(--vscode-notifications-background, var(--vscode-editorWidget-background));
+  border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}

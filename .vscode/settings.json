@@ -1,0 +1,39 @@
+{
+    "latooScripts.internalRun.includeScripts": [
+        "*"
+    ],
+    "latooScripts.internalRun.excludeScripts": [],
+    "latooScripts.persistentTerminal.excludeScripts": [],
+    "latooScripts.persistentTerminal.includeScripts": [
+        "*"
+    ],
+    "latooScripts.persistentTerminal.overrides": {
+        "/Users/mike/Developer/_dev/npm-scripts-custom::reinstall:cursor": {
+            "color": "terminal.ansiGreen"
+        }
+    },
+    "latooScripts.primaryClick.target": "internal",
+    "latooScripts.actions.showOpenScript": true,
+    "latooScripts.actions.showRunSecondary": true,
+    "latooScripts.actions.showRunExternal": false,
+    "latooScripts.actions.showOpenExternalTabCopyCommand": false,
+    "latooScripts.actions.showFavorite": true,
+    "latooScripts.internalRun.locationOverrides": {
+        "/Users/mike/Developer/_dev/npm-scripts-custom::claude": "panel",
+        "/Users/mike/Developer/_dev/npm-scripts-custom::reinstall:cursor": "panel"
+    },
+    "latooScripts.envName.excludeScripts": [
+        "/Users/mike/Developer/_dev/npm-scripts-custom::claude"
+    ],
+    "latooScripts.internalRun.mode": "dedicated",
+    "latooScripts.envName.enabled": true,
+    "latooScripts.envName.useWorkspaceFolderName": true,
+    "latooScripts.internalRun.preserveFocus": false,
+    "latooScripts.primaryClick.scriptOverrides": {
+        "/Users/mike/Developer/_dev/npm-scripts-custom::claude": "external"
+    },
+    "latooScripts.internalRun.alwaysNewOverrides": {
+        "/Users/mike/Developer/_dev/npm-scripts-custom::claude": true
+    },
+    "latooScripts.internalRun.openNewWhenBusy": true
+}

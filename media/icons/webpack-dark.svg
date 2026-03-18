@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 32 32">
+  <defs>
+    <radialGradient id="webpackDark" cx="-236.884" cy="-171.086" r="0.006" gradientTransform="matrix(2157.515, 0, 0, -2491.283, 511096.688, -426208.482)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#b4cbef"/>
+      <stop offset="0.593" stop-color="#d4e2fb"/>
+      <stop offset="1" stop-color="#a9c0e6"/>
+    </radialGradient>
+  </defs>
+  <title>file_type_webpack_dark</title>
+  <path d="M16,2.043,3.9,9.032V23.011L16,30l12.106-6.989V9.032Z" style="fill:url(#webpackDark)"/>
+  <path d="M16,9.133,10,12.6v6.932L16,23l6-3.466V12.6Z" style="fill:#89a8e5"/>
+  <path d="M16,2,3.869,9.037,16,15.642,28.131,9.08Zm0,14.548L3.869,22.981,16,29.974l12.088-7.037L16,16.548Z" style="fill:#ffffff;fill-opacity:0.14"/>
+</svg>
