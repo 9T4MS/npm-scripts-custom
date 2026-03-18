@@ -59,12 +59,14 @@ Licensing notes from upstream:
 - Source code: MIT
 - Icon assets: Creative Commons ShareAlike (CC BY-SA), with branded icons under their respective copyright/license terms.
 
-The following icons were added directly for this project and are treated as project-provided assets:
+The following icons were added from external internet sources and are not claimed as project-authored assets:
 
 - `media/icons/claude-code.svg`
 - `media/icons/eas.svg`
 - `media/icons/expo.svg`
 - `media/icons/nest.svg`
 - `media/icons/shell.svg`
+
+Source URLs and license metadata for these files should be documented before marketplace distribution.
 
 If you plan to republish this extension, verify trademark/brand usage rights for all logo-like assets.
