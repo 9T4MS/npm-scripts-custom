@@ -4,7 +4,7 @@
 // @ts-ignore -- provided by VS Code webview runtime
 const vscode = acquireVsCodeApi();
 
-/** @type {{ workspaces: any[], favorites: any[], tabOrder: string[], favoritesSectionOrder: string[], packageManager: string, envName: string, isEnvNameAuto: boolean, isEnvNameEnabled: boolean, primaryRunLocation: 'panel' | 'editor', primaryClickTarget: 'internal' | 'external', actionVisibility: { openScript: boolean, runSecondary: boolean, runExternal: boolean, openExternalTabCopyCommand: boolean, favorite: boolean }, scriptFeatureFilters: { envName: { includeScripts: string[], excludeScripts: string[] }, internalRun: { includeScripts: string[], excludeScripts: string[] }, persistentTerminal: { includeScripts: string[], excludeScripts: string[] } }, internalRunLocationOverrides: Record<string, 'panel' | 'editor'>, internalRunAlwaysNewOverrides: Record<string, boolean>, customFavoriteEntries?: Array<{ workspacePath: string, workspaceName: string, scriptName: string, scriptCommand: string, iconId?: string }> }} */
+/** @type {{ workspaces: any[], favorites: any[], tabOrder: string[], favoritesSectionOrder: string[], packageManager: string, envName: string, isEnvNameAuto: boolean, isEnvNameEnabled: boolean, primaryRunLocation: 'panel' | 'editor', primaryClickTarget: 'internal' | 'external', actionVisibility: { openScript: boolean, runSecondary: boolean, runExternal: boolean, openExternalTabCopyCommand: boolean, favorite: boolean }, scriptFeatureFilters: { envName: { includeScripts: string[], excludeScripts: string[] }, internalRun: { includeScripts: string[], excludeScripts: string[] }, persistentTerminal: { includeScripts: string[], excludeScripts: string[] } }, internalRunLocationOverrides: Record<string, 'panel' | 'editor'>, internalRunAlwaysNewOverrides: Record<string, boolean>, customFavoriteEntries?: Array<{ workspacePath: string, workspaceName: string, name?: string, scriptName?: string, command?: string, scriptCommand: string, iconId?: string }> }} */
 let state = {
   workspaces: [],
   favorites: [],
@@ -547,7 +547,12 @@ function getCustomFavoriteScripts() {
   const entries = state.customFavoriteEntries || [];
   const scripts = [];
   for (const entry of entries) {
-    if (!entry || !entry.workspacePath || !entry.scriptName || !entry.scriptCommand) {
+    if (!entry || !entry.workspacePath) {
+      continue;
+    }
+    const label = entry.scriptName ?? entry.name;
+    const cmd = entry.scriptCommand ?? entry.command;
+    if (!label || !cmd) {
       continue;
     }
     const workspace = state.workspaces.find((ws) => ws.path === entry.workspacePath);
@@ -558,8 +563,8 @@ function getCustomFavoriteScripts() {
         path: entry.workspacePath,
       },
       script: {
-        name: entry.scriptName,
-        command: entry.scriptCommand,
+        name: label,
+        command: cmd,
         workspaceName,
         workspacePath: entry.workspacePath,
         isRawCommand: true,

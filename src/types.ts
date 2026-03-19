@@ -1,5 +1,3 @@
-import * as vscode from 'vscode';
-
 export interface WorkspaceInfo {
   name: string;
   path: string;
@@ -50,6 +48,56 @@ export type ScriptFeatureFilters = {
 };
 
 export type PrimaryClickTarget = 'internal' | 'external';
+
+export type CustomFavoriteEntry = {
+  name: string;
+  command: string;
+  iconId?: string;
+};
+
+export type LatooScriptsConfig = {
+  primaryClickTarget: PrimaryClickTarget;
+  externalRunCommandTemplate: string;
+
+  internalRunMode: InternalRunMode;
+  internalRunLocation: InternalRunLocation;
+  internalRunPreserveFocus: boolean;
+  internalRunOpenNewWhenBusy: boolean;
+  internalRunLocationOverrides: Record<string, InternalRunLocation>;
+  internalRunAlwaysNewOverrides: Record<string, boolean>;
+  internalRunIncludeScripts: string[];
+  internalRunExcludeScripts: string[];
+
+  envNameDefault: string;
+  envNameUseWorkspaceFolderName: boolean;
+  envNameEnabled: boolean;
+  envNameIncludeScripts: string[];
+  envNameExcludeScripts: string[];
+
+  persistentTerminalOverrides: Record<string, PersistentTerminalOverride>;
+  persistentTerminalDefaultColors: string[];
+  persistentTerminalIncludeScripts: string[];
+  persistentTerminalExcludeScripts: string[];
+
+  showOpenScript: boolean;
+  showRunSecondary: boolean;
+  showRunExternal: boolean;
+  showOpenExternalTabCopyCommand: boolean;
+  showFavorite: boolean;
+
+  customFavoriteCommandsEnabled: boolean;
+  customFavoriteCommands: CustomFavoriteEntry[];
+};
+
+export type RunParams = {
+  workspacePath: string;
+  scriptName: string;
+  scriptCommand: string;
+  isRawCommand: boolean;
+  packageManager: string;
+  envName: string;
+  injectEnvName: boolean;
+};
 
 export type InternalRunTerminalStyle = {
   key: string;
@@ -150,13 +198,11 @@ export type ExtToWebviewMessage =
       scriptFeatureFilters: ScriptFeatureFilters;
       internalRunLocationOverrides: Record<string, InternalRunLocation>;
       internalRunAlwaysNewOverrides: Record<string, boolean>;
-      customFavoriteEntries?: {
+      customFavoriteEntries?: (CustomFavoriteEntry & {
         workspacePath: string;
         workspaceName: string;
-        scriptName: string;
         scriptCommand: string;
-        iconId?: string;
-      }[];
+      })[];
     };
 
 export interface StateManager {
@@ -168,38 +214,14 @@ export interface StateManager {
   setFavoritesSectionOrder(order: string[]): void;
   getTabOrder(): string[];
   setTabOrder(order: string[]): void;
+  getCustomFavoriteCommands(): CustomFavoriteEntry[];
+  setCustomFavoriteCommands(entries: CustomFavoriteEntry[]): void;
 }
 
 export interface TerminalManager {
-  run(
-    workspacePath: string,
-    scriptName: string,
-    scriptCommand: string,
-    isRawCommand: boolean,
-    packageManager: string,
-    envName: string,
-    injectEnvName: boolean,
-    options: InternalRunOptions
-  ): void;
-  runExternal(
-    workspacePath: string,
-    scriptName: string,
-    scriptCommand: string,
-    isRawCommand: boolean,
-    packageManager: string,
-    envName: string,
-    injectEnvName: boolean,
-    commandTemplate: string
-  ): void;
-  openExternalTabCopyCommand(
-    workspacePath: string,
-    scriptName: string,
-    scriptCommand: string,
-    isRawCommand: boolean,
-    packageManager: string,
-    envName: string,
-    injectEnvName: boolean
-  ): void;
+  run(params: RunParams, options: InternalRunOptions): void;
+  runExternal(params: RunParams, commandTemplate: string): void;
+  openExternalTabCopyCommand(params: RunParams): void;
   disposeScriptTerminals(workspacePath: string, scriptName: string): void;
   disposeManagedEditorTerminals(): void;
   dispose(): void;

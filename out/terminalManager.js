@@ -71,7 +71,8 @@ function createTerminalManager() {
         })
         : undefined;
     return {
-        run(workspacePath, scriptName, scriptCommand, isRawCommand, packageManager, envName, injectEnvName, options) {
+        run(params, options) {
+            const { workspacePath, scriptName, scriptCommand, isRawCommand, packageManager, envName, injectEnvName } = params;
             const key = getTerminalKey(workspacePath, scriptName, options);
             const terminalName = getTerminalDisplayName(workspacePath, scriptName, options);
             const terminalColor = toTerminalThemeColor(options.terminalStyle?.color);
@@ -141,7 +142,8 @@ function createTerminalManager() {
             terminal.sendText(runCommand);
             activeRunContextByTerminal.set(terminal, { key, workspacePath, scriptName });
         },
-        runExternal(workspacePath, scriptName, scriptCommand, isRawCommand, packageManager, envName, injectEnvName, commandTemplate) {
+        runExternal(params, commandTemplate) {
+            const { workspacePath, scriptName, scriptCommand, isRawCommand, packageManager, envName, injectEnvName } = params;
             const runCommand = buildRunCommand(workspacePath, scriptName, scriptCommand, isRawCommand, packageManager, envName, injectEnvName);
             const command = interpolateCommandTemplate(commandTemplate, {
                 workspacePath,
@@ -156,7 +158,8 @@ function createTerminalManager() {
             }
             executeExternalCommand(command, workspacePath, envName, true);
         },
-        openExternalTabCopyCommand(workspacePath, scriptName, scriptCommand, isRawCommand, packageManager, envName, injectEnvName) {
+        openExternalTabCopyCommand(params) {
+            const { workspacePath, scriptName, scriptCommand, isRawCommand, packageManager, envName, injectEnvName } = params;
             const runCommand = buildRunCommand(workspacePath, scriptName, scriptCommand, isRawCommand, packageManager, envName, injectEnvName);
             void openExternalTabAndCopyCommand(workspacePath, runCommand);
         },
@@ -379,10 +382,7 @@ async function runWarpLaunchConfigCleanup(excludeName) {
                 }
                 await fs.unlink(filePath);
             }
-            catch (err) {
-                if (!isIgnorableUnlinkError(err)) {
-                    // Ignore stat/read race errors so launch path is never blocked
-                }
+            catch {
                 continue;
             }
         }
@@ -390,13 +390,6 @@ async function runWarpLaunchConfigCleanup(excludeName) {
     catch {
         // Never throw from cleanup path
     }
-}
-function isIgnorableUnlinkError(err) {
-    if (err && typeof err === 'object' && 'code' in err && typeof err.code === 'string') {
-        const code = err.code;
-        return code === 'ENOENT' || code === 'EBUSY' || code === 'EPERM';
-    }
-    return false;
 }
 function buildWarpLaunchConfigurationYaml(launchConfigName, workspacePath, runCommand) {
     return `---

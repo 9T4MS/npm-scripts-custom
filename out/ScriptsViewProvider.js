@@ -39,43 +39,21 @@ const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
 const crypto_1 = require("crypto");
 const workspaceScanner_1 = require("./workspaceScanner");
+const gitUtils_1 = require("./gitUtils");
+const config_1 = require("./config");
+const quickSettings_1 = require("./quickSettings");
 class ScriptsViewProvider {
     extensionUri;
     stateManager;
     terminalManager;
     static viewType = 'latooScripts.scriptsView';
-    static externalRunCommandConfigKey = 'latooScripts.externalRun.commandTemplate';
-    static envNameDefaultConfigKey = 'latooScripts.envName.default';
-    static envNameUseWorkspaceFolderNameConfigKey = 'latooScripts.envName.useWorkspaceFolderName';
-    static envNameEnabledConfigKey = 'latooScripts.envName.enabled';
-    static customFavoriteCommandsEnabledConfigKey = 'latooScripts.customFavoriteCommands.enabled';
-    static customFavoriteCommandsEntriesConfigKey = 'latooScripts.customFavoriteCommands.entries';
-    static envNameIncludeScriptsConfigKey = 'latooScripts.envName.includeScripts';
-    static envNameExcludeScriptsConfigKey = 'latooScripts.envName.excludeScripts';
-    static internalRunModeConfigKey = 'latooScripts.internalRun.mode';
-    static internalRunIncludeScriptsConfigKey = 'latooScripts.internalRun.includeScripts';
-    static internalRunExcludeScriptsConfigKey = 'latooScripts.internalRun.excludeScripts';
-    static internalRunLocationConfigKey = 'latooScripts.internalRun.location';
-    static internalRunLocationOverridesConfigKey = 'latooScripts.internalRun.locationOverrides';
-    static internalRunPreserveFocusConfigKey = 'latooScripts.internalRun.preserveFocus';
-    static internalRunOpenNewWhenBusyConfigKey = 'latooScripts.internalRun.openNewWhenBusy';
-    static persistentTerminalOverridesConfigKey = 'latooScripts.persistentTerminal.overrides';
-    static persistentTerminalIncludeScriptsConfigKey = 'latooScripts.persistentTerminal.includeScripts';
-    static persistentTerminalExcludeScriptsConfigKey = 'latooScripts.persistentTerminal.excludeScripts';
-    static persistentTerminalDefaultColorsConfigKey = 'latooScripts.persistentTerminal.defaultColors';
-    static actionVisibilityOpenScriptConfigKey = 'latooScripts.actions.showOpenScript';
-    static actionVisibilityRunSecondaryConfigKey = 'latooScripts.actions.showRunSecondary';
-    static actionVisibilityRunExternalConfigKey = 'latooScripts.actions.showRunExternal';
-    static actionVisibilityOpenExternalTabCopyCommandConfigKey = 'latooScripts.actions.showOpenExternalTabCopyCommand';
-    static actionVisibilityFavoriteConfigKey = 'latooScripts.actions.showFavorite';
-    static primaryClickTargetConfigKey = 'latooScripts.primaryClick.target';
-    static internalRunAlwaysNewOverridesConfigKey = 'latooScripts.internalRun.alwaysNewOverrides';
     view;
     workspaces = [];
     packageManager;
     rootPaths;
     worktreeByRootPath = new Map();
     favoritesScopeId = 'default';
+    configChangeDisposable;
     constructor(extensionUri, rootPaths, stateManager, terminalManager) {
         this.extensionUri = extensionUri;
         this.stateManager = stateManager;
@@ -86,11 +64,14 @@ class ScriptsViewProvider {
         this.workspaces = (0, workspaceScanner_1.scanWorkspaceFolders)(this.rootPaths);
         this.favoritesScopeId = this.createFavoritesScopeId();
         this.stateManager.setFavoritesScope(this.favoritesScopeId);
-        vscode.workspace.onDidChangeConfiguration((event) => {
-            if (this.didRelevantConfigChange(event)) {
+        this.configChangeDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
+            if ((0, config_1.didConfigChange)(event)) {
                 this.sendUpdate();
             }
         });
+    }
+    dispose() {
+        this.configChangeDisposable.dispose();
     }
     resolveWebviewView(webviewView, _context, _token) {
         this.view = webviewView;
@@ -110,20 +91,23 @@ class ScriptsViewProvider {
                     break;
                 case 'runScript':
                     {
-                        const injectEnvName = this.shouldInjectEnvName(msg.workspacePath, msg.scriptName);
-                        this.terminalManager.run(msg.workspacePath, msg.scriptName, msg.scriptCommand, Boolean(msg.isRawCommand), this.packageManager, this.getEnvName(), injectEnvName, this.getInternalRunOptions(msg.workspacePath, msg.scriptName, msg.locationOverride));
+                        const config = (0, config_1.readConfig)();
+                        const params = this.buildRunParams(config, msg.workspacePath, msg.scriptName, msg.scriptCommand, Boolean(msg.isRawCommand));
+                        this.terminalManager.run(params, this.getInternalRunOptions(config, msg.workspacePath, msg.scriptName, msg.locationOverride));
                     }
                     break;
                 case 'runExternal':
                     {
-                        const injectEnvName = this.shouldInjectEnvName(msg.workspacePath, msg.scriptName);
-                        this.terminalManager.runExternal(msg.workspacePath, msg.scriptName, msg.scriptCommand, Boolean(msg.isRawCommand), this.packageManager, this.getEnvName(), injectEnvName, this.getExternalRunCommandTemplate());
+                        const config = (0, config_1.readConfig)();
+                        const params = this.buildRunParams(config, msg.workspacePath, msg.scriptName, msg.scriptCommand, Boolean(msg.isRawCommand));
+                        this.terminalManager.runExternal(params, config.externalRunCommandTemplate);
                     }
                     break;
                 case 'openExternalTabCopyCommand':
                     {
-                        const injectEnvName = this.shouldInjectEnvName(msg.workspacePath, msg.scriptName);
-                        this.terminalManager.openExternalTabCopyCommand(msg.workspacePath, msg.scriptName, msg.scriptCommand, Boolean(msg.isRawCommand), this.packageManager, this.getEnvName(), injectEnvName);
+                        const config = (0, config_1.readConfig)();
+                        const params = this.buildRunParams(config, msg.workspacePath, msg.scriptName, msg.scriptCommand, Boolean(msg.isRawCommand));
+                        this.terminalManager.openExternalTabCopyCommand(params);
                     }
                     break;
                 case 'openScriptInPackageJson':
@@ -146,10 +130,10 @@ class ScriptsViewProvider {
                     this.stateManager.setFavoritesSectionOrder(msg.favoritesSectionOrder);
                     break;
                 case 'togglePersistentTerminalScript':
-                    void this.setScriptFeatureEnabled(ScriptsViewProvider.persistentTerminalIncludeScriptsConfigKey, ScriptsViewProvider.persistentTerminalExcludeScriptsConfigKey, msg.workspacePath, msg.scriptName, msg.enabled);
+                    void this.setScriptFeatureEnabled('persistentTerminal', msg.workspacePath, msg.scriptName, msg.enabled);
                     break;
                 case 'toggleEnvNameScriptDisabled':
-                    void this.setScriptFeatureEnabled(ScriptsViewProvider.envNameIncludeScriptsConfigKey, ScriptsViewProvider.envNameExcludeScriptsConfigKey, msg.workspacePath, msg.scriptName, !msg.disabled);
+                    void this.setScriptFeatureEnabled('envName', msg.workspacePath, msg.scriptName, !msg.disabled);
                     break;
                 case 'setScriptLocationOverride':
                     void this.setScriptLocationOverride(msg.workspacePath, msg.scriptName, msg.location);
@@ -161,96 +145,7 @@ class ScriptsViewProvider {
         });
     }
     async showQuickSettings() {
-        const selected = await vscode.window.showQuickPick([
-            {
-                label: `Toggle primary click target (current: ${this.getPrimaryClickTarget() === 'internal' ? 'Run internally' : 'Run externally'})`,
-                detail: this.getConfigurationDescription(ScriptsViewProvider.primaryClickTargetConfigKey, 'Controls whether clicking a script row runs internally or externally by default.'),
-                value: 'primary-click',
-            },
-            {
-                label: 'Choose visible row action buttons',
-                detail: 'Controls which quick action buttons are visible on each script row.',
-                value: 'quick-actions',
-            },
-            {
-                label: `Toggle internal run mode (current: ${this.getInternalRunMode()})`,
-                detail: this.getConfigurationDescription(ScriptsViewProvider.internalRunModeConfigKey, 'Switches between one shared runner terminal and per-script terminals.'),
-                value: 'internal-run-mode',
-            },
-            {
-                label: `Toggle internal run location (current: ${this.getInternalRunLocation()})`,
-                detail: this.getConfigurationDescription(ScriptsViewProvider.internalRunLocationConfigKey, 'Sets whether internal runs open in terminal panel or editor area.'),
-                value: 'internal-run-location',
-            },
-            {
-                label: `Toggle preserve focus on run (current: ${this.getInternalRunPreserveFocus() ? 'on' : 'off'})`,
-                detail: this.getConfigurationDescription(ScriptsViewProvider.internalRunPreserveFocusConfigKey, 'When enabled, running scripts keeps editor focus.'),
-                value: 'internal-run-preserve-focus',
-            },
-            {
-                label: `Toggle open new terminal when busy (current: ${this.getInternalRunOpenNewWhenBusy() ? 'on' : 'off'})`,
-                detail: this.getConfigurationDescription(ScriptsViewProvider.internalRunOpenNewWhenBusyConfigKey, 'When enabled, busy terminals get a new overflow terminal instead of interruption.'),
-                value: 'internal-run-open-new-when-busy',
-            },
-            {
-                label: `Toggle envName hint visibility (current: ${this.getEnvNameEnabled() ? 'on' : 'off'})`,
-                detail: this.getConfigurationDescription(ScriptsViewProvider.envNameEnabledConfigKey, 'Shows or hides envName in the Latoo Scripts view header.'),
-                value: 'env-name-enabled',
-            },
-            {
-                label: `Toggle envName source (current: ${this.getUseWorkspaceFolderName() ? 'workspace folder/worktree aware' : 'envName.default'})`,
-                detail: this.getConfigurationDescription(ScriptsViewProvider.envNameUseWorkspaceFolderNameConfigKey, 'Chooses envName source between workspace folder name and envName.default.'),
-                value: 'env-name-source',
-            },
-            {
-                label: `Toggle auto terminal style for all scripts (current: ${this.isAutoTerminalStyleEnabledGlobally() ? 'on' : 'off'})`,
-                detail: this.getConfigurationDescription(ScriptsViewProvider.persistentTerminalIncludeScriptsConfigKey, 'Controls which scripts receive auto terminal style (name/color).'),
-                value: 'auto-terminal-style-enabled',
-            },
-            {
-                label: `Toggle custom favorite commands (current: ${this.getCustomFavoriteCommandsEnabled() ? 'on' : 'off'})`,
-                detail: this.getConfigurationDescription(ScriptsViewProvider.customFavoriteCommandsEnabledConfigKey, 'Shows configurable always-on-top favorite command entries.'),
-                value: 'custom-favorite-commands-enabled',
-            },
-        ], {
-            placeHolder: 'Quick settings: choose what to configure',
-            ignoreFocusOut: false,
-        });
-        if (!selected) {
-            return;
-        }
-        switch (selected.value) {
-            case 'primary-click':
-                await this.togglePrimaryClickTarget();
-                return;
-            case 'quick-actions':
-                await this.toggleQuickActionVisibility();
-                return;
-            case 'internal-run-mode':
-                await this.toggleInternalRunMode();
-                return;
-            case 'internal-run-location':
-                await this.toggleInternalRunLocation();
-                return;
-            case 'internal-run-preserve-focus':
-                await this.toggleInternalRunPreserveFocus();
-                return;
-            case 'internal-run-open-new-when-busy':
-                await this.toggleInternalRunOpenNewWhenBusy();
-                return;
-            case 'env-name-enabled':
-                await this.toggleEnvNameEnabled();
-                return;
-            case 'env-name-source':
-                await this.toggleEnvNameSource();
-                return;
-            case 'auto-terminal-style-enabled':
-                await this.toggleAutoTerminalStyleEnabledGlobally();
-                return;
-            case 'custom-favorite-commands-enabled':
-                await this.toggleCustomFavoriteCommandsEnabled();
-                return;
-        }
+        await (0, quickSettings_1.showQuickSettings)((0, config_1.readConfig)(), this.extensionUri, this.stateManager, this.rootPaths);
     }
     refresh() {
         const primaryRootPath = this.rootPaths[0] ?? '';
@@ -271,27 +166,26 @@ class ScriptsViewProvider {
             return;
         }
         this.stateManager.setFavoritesScope(this.favoritesScopeId);
-        const migratedFavorites = this.migrateFavorites(this.stateManager.getFavorites());
-        const envNameEnabled = this.getEnvNameEnabled();
-        const envName = this.getEnvName();
-        this.view.description = envNameEnabled ? `envName: ${envName}` : undefined;
+        const config = (0, config_1.readConfig)();
+        const envName = this.getEnvName(config);
+        this.view.description = config.envNameEnabled ? `envName: ${envName}` : undefined;
         const message = {
             type: 'updateData',
             workspaces: this.workspaces,
-            favorites: migratedFavorites,
+            favorites: this.migrateFavorites(this.stateManager.getFavorites()),
             tabOrder: this.stateManager.getTabOrder(),
             favoritesSectionOrder: this.stateManager.getFavoritesSectionOrder(),
             packageManager: this.packageManager,
             envName,
-            isEnvNameAuto: this.getUseWorkspaceFolderName(),
-            isEnvNameEnabled: envNameEnabled,
-            primaryRunLocation: this.getInternalRunLocation(),
-            primaryClickTarget: this.getPrimaryClickTarget(),
-            actionVisibility: this.getActionVisibility(),
-            scriptFeatureFilters: this.getScriptFeatureFilters(),
-            internalRunLocationOverrides: this.getInternalRunLocationOverrides(),
-            internalRunAlwaysNewOverrides: this.getInternalRunAlwaysNewOverrides(),
-            customFavoriteEntries: this.getCustomFavoriteEntries(),
+            isEnvNameAuto: config.envNameUseWorkspaceFolderName,
+            isEnvNameEnabled: config.envNameEnabled,
+            primaryRunLocation: config.internalRunLocation,
+            primaryClickTarget: config.primaryClickTarget,
+            actionVisibility: (0, config_1.getActionVisibility)(config),
+            scriptFeatureFilters: (0, config_1.getScriptFeatureFilters)(config),
+            internalRunLocationOverrides: (0, config_1.normalizeLocationOverrides)(config),
+            internalRunAlwaysNewOverrides: (0, config_1.normalizeAlwaysNewOverrides)(config),
+            customFavoriteEntries: this.getCustomFavoriteEntries(config),
         };
         this.view.webview.postMessage(message);
     }
@@ -317,151 +211,61 @@ class ScriptsViewProvider {
 </body>
 </html>`;
     }
-    getExternalRunCommandTemplate() {
-        return vscode.workspace
-            .getConfiguration()
-            .get(ScriptsViewProvider.externalRunCommandConfigKey, 'open "warp://action/new_tab?path={workspacePathUri}&command={runCommandUri}"');
-    }
-    getInternalRunMode() {
-        const value = vscode.workspace
-            .getConfiguration()
-            .get(ScriptsViewProvider.internalRunModeConfigKey, 'dedicated');
-        return value === 'perScript' ? 'perScript' : 'dedicated';
-    }
-    getInternalRunLocation() {
-        const value = vscode.workspace
-            .getConfiguration()
-            .get(ScriptsViewProvider.internalRunLocationConfigKey, 'panel');
-        return value === 'editor' ? 'editor' : 'panel';
-    }
-    getPrimaryClickTarget() {
-        const value = vscode.workspace
-            .getConfiguration()
-            .get(ScriptsViewProvider.primaryClickTargetConfigKey, 'internal');
-        return value === 'external' ? 'external' : 'internal';
-    }
-    getInternalRunAlwaysNewOverrides() {
-        const configured = vscode.workspace
-            .getConfiguration()
-            .get(ScriptsViewProvider.internalRunAlwaysNewOverridesConfigKey, {});
-        const normalized = {};
-        for (const [key, value] of Object.entries(configured)) {
-            if (typeof value === 'boolean') {
-                normalized[key] = value;
-            }
-        }
-        return normalized;
-    }
-    getInternalRunPreserveFocus() {
-        return vscode.workspace
-            .getConfiguration()
-            .get(ScriptsViewProvider.internalRunPreserveFocusConfigKey, true);
-    }
-    getInternalRunOpenNewWhenBusy() {
-        return vscode.workspace
-            .getConfiguration()
-            .get(ScriptsViewProvider.internalRunOpenNewWhenBusyConfigKey, true);
-    }
-    getInternalRunOptions(workspacePath, scriptName, locationOverride) {
-        const useInternalRunBehavior = this.shouldApplyInternalRunBehavior(workspacePath, scriptName);
-        const location = locationOverride
-            ?? this.getScriptLocationOverride(workspacePath, scriptName)
-            ?? (useInternalRunBehavior ? this.getInternalRunLocation() : 'panel');
-        const terminalStyle = this.getInternalRunTerminalStyle(workspacePath, scriptName);
+    buildRunParams(config, workspacePath, scriptName, scriptCommand, isRawCommand) {
         return {
-            mode: useInternalRunBehavior ? this.getInternalRunMode() : 'dedicated',
+            workspacePath,
+            scriptName,
+            scriptCommand,
+            isRawCommand,
+            packageManager: this.packageManager,
+            envName: this.getEnvName(config),
+            injectEnvName: this.shouldInjectEnvName(config, workspacePath, scriptName),
+        };
+    }
+    getInternalRunOptions(config, workspacePath, scriptName, locationOverride) {
+        const useInternalRunBehavior = this.shouldApplyInternalRunBehavior(config, workspacePath, scriptName);
+        const location = locationOverride
+            ?? this.getScriptLocationOverrideValue(config, workspacePath, scriptName)
+            ?? (useInternalRunBehavior ? config.internalRunLocation : 'panel');
+        const terminalStyle = this.getInternalRunTerminalStyle(config, workspacePath, scriptName);
+        return {
+            mode: useInternalRunBehavior ? config.internalRunMode : 'dedicated',
             location,
-            preserveFocus: useInternalRunBehavior ? this.getInternalRunPreserveFocus() : true,
-            openNewWhenBusy: useInternalRunBehavior ? this.getInternalRunOpenNewWhenBusy() : true,
-            alwaysNewTerminal: this.getScriptAlwaysNewOverride(workspacePath, scriptName),
+            preserveFocus: useInternalRunBehavior ? config.internalRunPreserveFocus : true,
+            openNewWhenBusy: useInternalRunBehavior ? config.internalRunOpenNewWhenBusy : true,
+            alwaysNewTerminal: this.getScriptAlwaysNewOverrideValue(config, workspacePath, scriptName),
             terminalStyle,
         };
     }
-    getInternalRunLocationOverrides() {
-        const configured = vscode.workspace
-            .getConfiguration()
-            .get(ScriptsViewProvider.internalRunLocationOverridesConfigKey, {});
-        const normalized = {};
-        for (const [key, value] of Object.entries(configured)) {
-            if (value === 'panel' || value === 'editor') {
-                normalized[key] = value;
-            }
-        }
-        return normalized;
+    getScriptLocationOverrideValue(config, workspacePath, scriptName) {
+        return (0, config_1.normalizeLocationOverrides)(config)[getPersistentTerminalKey(workspacePath, scriptName)];
     }
-    getScriptLocationOverride(workspacePath, scriptName) {
-        return this.getInternalRunLocationOverrides()[this.getPersistentTerminalKey(workspacePath, scriptName)];
+    getScriptAlwaysNewOverrideValue(config, workspacePath, scriptName) {
+        return (0, config_1.normalizeAlwaysNewOverrides)(config)[getPersistentTerminalKey(workspacePath, scriptName)] === true;
     }
-    getScriptAlwaysNewOverride(workspacePath, scriptName) {
-        return this.getInternalRunAlwaysNewOverrides()[this.getPersistentTerminalKey(workspacePath, scriptName)] === true;
-    }
-    getActionVisibility() {
-        const configuration = vscode.workspace.getConfiguration();
-        return {
-            openScript: configuration.get(ScriptsViewProvider.actionVisibilityOpenScriptConfigKey, true),
-            runSecondary: configuration.get(ScriptsViewProvider.actionVisibilityRunSecondaryConfigKey, true),
-            runExternal: configuration.get(ScriptsViewProvider.actionVisibilityRunExternalConfigKey, true),
-            openExternalTabCopyCommand: configuration.get(ScriptsViewProvider.actionVisibilityOpenExternalTabCopyCommandConfigKey, true),
-            favorite: configuration.get(ScriptsViewProvider.actionVisibilityFavoriteConfigKey, true),
-        };
-    }
-    getPersistentTerminalOverrides() {
-        return vscode.workspace
-            .getConfiguration()
-            .get(ScriptsViewProvider.persistentTerminalOverridesConfigKey, {});
-    }
-    getPersistentTerminalDefaultColors() {
-        const configuredColors = vscode.workspace
-            .getConfiguration()
-            .get(ScriptsViewProvider.persistentTerminalDefaultColorsConfigKey, [
-            'terminal.ansiBlue',
-            'terminal.ansiCyan',
-            'terminal.ansiGreen',
-            'terminal.ansiMagenta',
-            'terminal.ansiYellow',
-            'terminal.ansiRed',
-        ]);
-        const filtered = configuredColors.filter((colorId) => colorId.trim().length > 0);
-        if (filtered.length > 0) {
-            return filtered;
-        }
-        return ['terminal.ansiBlue'];
-    }
-    getTerminalStyleOverride(workspacePath, scriptName) {
-        const overrides = this.getPersistentTerminalOverrides();
-        return overrides[this.getPersistentTerminalKey(workspacePath, scriptName)];
-    }
-    getInternalRunTerminalStyle(workspacePath, scriptName) {
-        if (!this.shouldApplyPersistentTerminalBehavior(workspacePath, scriptName)) {
+    getInternalRunTerminalStyle(config, workspacePath, scriptName) {
+        if (!this.shouldApplyPersistentTerminalBehavior(config, workspacePath, scriptName)) {
             return undefined;
         }
-        const override = this.getTerminalStyleOverride(workspacePath, scriptName);
+        const key = getPersistentTerminalKey(workspacePath, scriptName);
+        const override = config.persistentTerminalOverrides[key];
         const overrideName = override?.name?.trim();
         const overrideColor = override?.color?.trim();
-        const keyHash = (0, crypto_1.createHash)('sha1')
-            .update(this.getPersistentTerminalKey(workspacePath, scriptName))
-            .digest('hex')
-            .slice(0, 10);
+        const keyHash = (0, crypto_1.createHash)('sha1').update(key).digest('hex').slice(0, 10);
         return {
             key: `persistent:${keyHash}`,
             name: overrideName && overrideName.length > 0
                 ? overrideName
-                : this.buildDefaultPersistentTerminalName(scriptName),
+                : `Latoo • ${scriptName}`,
             color: overrideColor && overrideColor.length > 0
                 ? overrideColor
-                : this.pickDefaultPersistentTerminalColor(workspacePath, scriptName),
+                : this.pickDefaultPersistentTerminalColor(config, workspacePath, scriptName),
         };
     }
-    getPersistentTerminalKey(workspacePath, scriptName) {
-        return `${workspacePath}::${scriptName}`;
-    }
-    buildDefaultPersistentTerminalName(scriptName) {
-        return `Latoo • ${scriptName}`;
-    }
-    pickDefaultPersistentTerminalColor(workspacePath, scriptName) {
-        const palette = this.getPersistentTerminalDefaultColors();
+    pickDefaultPersistentTerminalColor(config, workspacePath, scriptName) {
+        const palette = (0, config_1.getValidatedDefaultColors)(config);
         const hashHex = (0, crypto_1.createHash)('sha1')
-            .update(this.getPersistentTerminalKey(workspacePath, scriptName))
+            .update(getPersistentTerminalKey(workspacePath, scriptName))
             .digest('hex')
             .slice(0, 8);
         const hashValue = Number.parseInt(hashHex, 16);
@@ -500,43 +304,9 @@ class ScriptsViewProvider {
         if (!primaryRootPath) {
             return 'default';
         }
-        const repoIdentity = this.getRepositoryIdentity(primaryRootPath);
+        const repoIdentity = (0, gitUtils_1.getRepositoryIdentity)(primaryRootPath);
         const hash = (0, crypto_1.createHash)('sha1').update(repoIdentity).digest('hex').slice(0, 12);
         return hash;
-    }
-    getRepositoryIdentity(workspacePath) {
-        const dotGitPath = path.join(workspacePath, '.git');
-        try {
-            const dotGitStats = fs.statSync(dotGitPath);
-            if (dotGitStats.isDirectory()) {
-                return fs.realpathSync(dotGitPath);
-            }
-            if (!dotGitStats.isFile()) {
-                return fs.realpathSync(workspacePath);
-            }
-            const dotGitContent = fs.readFileSync(dotGitPath, 'utf8');
-            const gitDirLine = dotGitContent
-                .split(/\r?\n/)
-                .map((line) => line.trim())
-                .find((line) => line.toLowerCase().startsWith('gitdir:'));
-            if (!gitDirLine) {
-                return fs.realpathSync(workspacePath);
-            }
-            const gitDirValue = gitDirLine.slice('gitdir:'.length).trim();
-            if (!gitDirValue) {
-                return fs.realpathSync(workspacePath);
-            }
-            const resolvedGitDir = path.resolve(workspacePath, gitDirValue);
-            const normalizedGitDir = resolvedGitDir.replace(/\\/g, '/').toLowerCase();
-            if (normalizedGitDir.includes('/worktrees/')) {
-                // Convert .git/worktrees/<name> to the repository .git directory.
-                return fs.realpathSync(path.dirname(path.dirname(resolvedGitDir)));
-            }
-            return fs.realpathSync(resolvedGitDir);
-        }
-        catch {
-            return workspacePath;
-        }
     }
     async openScriptInPackageJson(workspacePath, scriptName, scriptLine, scriptColumn) {
         const pkgUri = vscode.Uri.file(path.join(workspacePath, 'package.json'));
@@ -644,54 +414,32 @@ class ScriptsViewProvider {
         }
         return undefined;
     }
-    getDefaultEnvName() {
-        const configured = vscode.workspace
-            .getConfiguration()
-            .get(ScriptsViewProvider.envNameDefaultConfigKey, 'local-0');
-        const trimmed = configured?.trim();
-        return trimmed && trimmed.length > 0 ? trimmed : 'local-0';
+    async openUserSettingsJson() {
+        try {
+            await vscode.commands.executeCommand('workbench.action.openApplicationSettingsJson');
+        }
+        catch {
+            await vscode.commands.executeCommand('workbench.action.openSettingsJson');
+        }
     }
-    getUseWorkspaceFolderName() {
-        return vscode.workspace
-            .getConfiguration()
-            .get(ScriptsViewProvider.envNameUseWorkspaceFolderNameConfigKey, true);
-    }
-    getEnvNameEnabled() {
-        return vscode.workspace
-            .getConfiguration()
-            .get(ScriptsViewProvider.envNameEnabledConfigKey, true);
-    }
-    getCustomFavoriteCommandsEnabled() {
-        return vscode.workspace
-            .getConfiguration()
-            .get(ScriptsViewProvider.customFavoriteCommandsEnabledConfigKey, true);
-    }
-    getCustomFavoriteEntries() {
+    getCustomFavoriteEntries(config) {
         const workspacePath = this.rootPaths[0]?.trim();
-        if (!workspacePath || !this.getCustomFavoriteCommandsEnabled()) {
+        if (!workspacePath || !config.customFavoriteCommandsEnabled) {
             return [];
         }
-        const configuredEntries = vscode.workspace
-            .getConfiguration()
-            .get(ScriptsViewProvider.customFavoriteCommandsEntriesConfigKey, [{ name: 'claude', command: 'claude', iconId: 'claude' }]);
         const workspaceName = path.basename(workspacePath);
-        const entries = [];
-        for (const entry of configuredEntries) {
-            const scriptName = typeof entry?.name === 'string' ? entry.name.trim() : '';
-            const scriptCommand = typeof entry?.command === 'string' ? entry.command.trim() : '';
-            const iconIdValue = typeof entry?.iconId === 'string' ? entry.iconId.trim() : '';
-            if (scriptName.length === 0 || scriptCommand.length === 0) {
-                continue;
-            }
-            entries.push({
-                workspacePath,
-                workspaceName,
-                scriptName,
-                scriptCommand,
-                iconId: iconIdValue.length > 0 ? iconIdValue : undefined,
-            });
+        const sharedEntries = this.stateManager.getCustomFavoriteCommands();
+        const settingsEntries = config.customFavoriteCommands;
+        const byName = new Map();
+        for (const entry of sharedEntries) {
+            byName.set(entry.name, entry);
         }
-        return entries;
+        for (const entry of settingsEntries) {
+            byName.set(entry.name, entry);
+        }
+        return Array.from(byName.values())
+            .filter(e => e.name.length > 0 && e.command.length > 0)
+            .map(e => ({ ...e, workspacePath, workspaceName, scriptCommand: e.command }));
     }
     getWorkspaceFolderName() {
         const primaryRootPath = this.rootPaths[0];
@@ -709,291 +457,83 @@ class ScriptsViewProvider {
         if (cachedValue !== undefined) {
             return cachedValue;
         }
-        const isWorktree = this.detectGitWorktree(primaryRootPath);
+        const isWorktree = (0, gitUtils_1.detectGitWorktree)(primaryRootPath);
         this.worktreeByRootPath.set(primaryRootPath, isWorktree);
         return isWorktree;
     }
-    detectGitWorktree(workspacePath) {
-        try {
-            const dotGitPath = path.join(workspacePath, '.git');
-            const dotGitStats = fs.statSync(dotGitPath);
-            if (!dotGitStats.isFile()) {
-                return false;
+    getEnvName(config) {
+        const c = config ?? (0, config_1.readConfig)();
+        if (c.envNameUseWorkspaceFolderName && this.isPrimaryRootGitWorktree()) {
+            const folderName = this.getWorkspaceFolderName().trim();
+            if (folderName.length > 0) {
+                return folderName;
             }
-            const dotGitContent = fs.readFileSync(dotGitPath, 'utf8');
-            const gitDirLine = dotGitContent
-                .split(/\r?\n/)
-                .map((line) => line.trim())
-                .find((line) => line.toLowerCase().startsWith('gitdir:'));
-            if (!gitDirLine) {
-                return false;
-            }
-            const gitDirValue = gitDirLine.slice('gitdir:'.length).trim();
-            if (!gitDirValue) {
-                return false;
-            }
-            // Worktree .git files point into the repository's .git/worktrees/... path.
-            const resolvedGitDir = path.resolve(workspacePath, gitDirValue);
-            const normalizedGitDir = resolvedGitDir.replace(/\\/g, '/').toLowerCase();
-            return normalizedGitDir.includes('/worktrees/');
         }
-        catch {
-            return false;
-        }
+        const trimmed = c.envNameDefault.trim();
+        return trimmed.length > 0 ? trimmed : 'local-0';
     }
-    getEnvName() {
-        if (this.getUseWorkspaceFolderName()) {
-            if (this.isPrimaryRootGitWorktree()) {
-                const folderName = this.getWorkspaceFolderName().trim();
-                if (folderName.length > 0) {
-                    return folderName;
-                }
-            }
-            return this.getDefaultEnvName();
-        }
-        return this.getDefaultEnvName();
+    shouldInjectEnvName(config, workspacePath, scriptName) {
+        const filters = (0, config_1.getScriptFeatureFilters)(config);
+        return (0, config_1.isScriptTargetEnabled)(filters.envName.includeScripts, filters.envName.excludeScripts, workspacePath, scriptName);
     }
-    getEnvNameIncludeScripts() {
-        return this.getScriptPatternList(ScriptsViewProvider.envNameIncludeScriptsConfigKey, ['*']);
+    shouldApplyInternalRunBehavior(config, workspacePath, scriptName) {
+        const filters = (0, config_1.getScriptFeatureFilters)(config);
+        return (0, config_1.isScriptTargetEnabled)(filters.internalRun.includeScripts, filters.internalRun.excludeScripts, workspacePath, scriptName);
     }
-    getEnvNameExcludeScripts() {
-        return this.getScriptPatternList(ScriptsViewProvider.envNameExcludeScriptsConfigKey, []);
+    shouldApplyPersistentTerminalBehavior(config, workspacePath, scriptName) {
+        const filters = (0, config_1.getScriptFeatureFilters)(config);
+        return (0, config_1.isScriptTargetEnabled)(filters.persistentTerminal.includeScripts, filters.persistentTerminal.excludeScripts, workspacePath, scriptName);
     }
-    getInternalRunIncludeScripts() {
-        return this.getScriptPatternList(ScriptsViewProvider.internalRunIncludeScriptsConfigKey, ['*']);
-    }
-    getInternalRunExcludeScripts() {
-        return this.getScriptPatternList(ScriptsViewProvider.internalRunExcludeScriptsConfigKey, []);
-    }
-    getPersistentTerminalIncludeScripts() {
-        return this.getScriptPatternList(ScriptsViewProvider.persistentTerminalIncludeScriptsConfigKey, ['*']);
-    }
-    getPersistentTerminalExcludeScripts() {
-        return this.getScriptPatternList(ScriptsViewProvider.persistentTerminalExcludeScriptsConfigKey, []);
-    }
-    shouldInjectEnvName(workspacePath, scriptName) {
-        return this.isScriptTargetEnabled(this.getEnvNameIncludeScripts(), this.getEnvNameExcludeScripts(), workspacePath, scriptName);
-    }
-    shouldApplyInternalRunBehavior(workspacePath, scriptName) {
-        return this.isScriptTargetEnabled(this.getInternalRunIncludeScripts(), this.getInternalRunExcludeScripts(), workspacePath, scriptName);
-    }
-    shouldApplyPersistentTerminalBehavior(workspacePath, scriptName) {
-        return this.isScriptTargetEnabled(this.getPersistentTerminalIncludeScripts(), this.getPersistentTerminalExcludeScripts(), workspacePath, scriptName);
-    }
-    isScriptTargetEnabled(includePatterns, excludePatterns, workspacePath, scriptName) {
-        const isIncluded = includePatterns.some((pattern) => this.matchesScriptTargetPattern(workspacePath, scriptName, pattern));
-        if (!isIncluded) {
-            return false;
-        }
-        const isExcluded = excludePatterns.some((pattern) => this.matchesScriptTargetPattern(workspacePath, scriptName, pattern));
-        return !isExcluded;
-    }
-    matchesScriptTargetPattern(workspacePath, scriptName, pattern) {
-        const separatorIndex = pattern.indexOf('::');
-        if (separatorIndex < 0) {
-            return this.matchesScriptPattern(scriptName, pattern);
-        }
-        const workspacePattern = pattern.slice(0, separatorIndex) || '*';
-        const scriptPattern = pattern.slice(separatorIndex + 2) || '*';
-        return this.matchesScriptPattern(workspacePath, workspacePattern)
-            && this.matchesScriptPattern(scriptName, scriptPattern);
-    }
-    getScriptPatternList(configKey, defaultValue) {
-        const configured = vscode.workspace
-            .getConfiguration()
-            .get(configKey, defaultValue);
-        const normalized = configured
-            .map((pattern) => pattern.trim())
-            .filter((pattern) => pattern.length > 0);
-        return normalized.length > 0 ? normalized : defaultValue;
-    }
-    matchesScriptPattern(scriptName, pattern) {
-        if (pattern === '*') {
-            return true;
-        }
-        const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
-        const regex = new RegExp(`^${escaped}$`);
-        return regex.test(scriptName);
-    }
-    getScriptFeatureFilters() {
-        return {
-            envName: {
-                includeScripts: this.getEnvNameIncludeScripts(),
-                excludeScripts: this.getEnvNameExcludeScripts(),
-            },
-            internalRun: {
-                includeScripts: this.getInternalRunIncludeScripts(),
-                excludeScripts: this.getInternalRunExcludeScripts(),
-            },
-            persistentTerminal: {
-                includeScripts: this.getPersistentTerminalIncludeScripts(),
-                excludeScripts: this.getPersistentTerminalExcludeScripts(),
-            },
-        };
-    }
-    async setScriptFeatureEnabled(includeConfigKey, configKey, workspacePath, scriptName, enabled) {
-        const target = this.getPersistentTerminalKey(workspacePath, scriptName);
-        const includeList = this.getScriptPatternList(includeConfigKey, ['*']);
+    async setScriptFeatureEnabled(feature, workspacePath, scriptName, enabled) {
+        const config = (0, config_1.readConfig)();
+        const filters = (0, config_1.getScriptFeatureFilters)(config);
+        const target = getPersistentTerminalKey(workspacePath, scriptName);
+        const includeKey = feature === 'persistentTerminal' ? 'persistentTerminalIncludeScripts' : 'envNameIncludeScripts';
+        const excludeKey = feature === 'persistentTerminal' ? 'persistentTerminalExcludeScripts' : 'envNameExcludeScripts';
+        const featureFilters = filters[feature];
+        const includeList = featureFilters.includeScripts;
         const includeSet = new Set(includeList);
-        if (enabled && !includeList.some((pattern) => this.matchesScriptTargetPattern(workspacePath, scriptName, pattern))) {
+        const patch = {};
+        if (enabled && !includeList.some((pattern) => (0, config_1.isScriptTargetEnabled)([pattern], [], workspacePath, scriptName))) {
             includeSet.add(target);
-            await vscode.workspace.getConfiguration().update(includeConfigKey, Array.from(includeSet), vscode.ConfigurationTarget.Workspace);
+            patch[includeKey] = Array.from(includeSet);
         }
-        const list = this.getScriptPatternList(configKey, []);
-        const nextSet = new Set(list);
+        const excludeList = featureFilters.excludeScripts;
+        const excludeSet = new Set(excludeList);
         if (enabled) {
-            nextSet.delete(target);
+            excludeSet.delete(target);
         }
         else {
-            nextSet.add(target);
+            excludeSet.add(target);
         }
-        await vscode.workspace.getConfiguration().update(configKey, Array.from(nextSet), vscode.ConfigurationTarget.Workspace);
+        patch[excludeKey] = Array.from(excludeSet);
+        await (0, config_1.updateConfig)(patch);
     }
     async setScriptLocationOverride(workspacePath, scriptName, location) {
         this.terminalManager.disposeScriptTerminals(workspacePath, scriptName);
-        const key = this.getPersistentTerminalKey(workspacePath, scriptName);
-        const overrides = { ...this.getInternalRunLocationOverrides() };
+        const config = (0, config_1.readConfig)();
+        const overrides = { ...(0, config_1.normalizeLocationOverrides)(config) };
+        const key = getPersistentTerminalKey(workspacePath, scriptName);
         if (!location) {
             delete overrides[key];
         }
         else {
             overrides[key] = location;
         }
-        await vscode.workspace.getConfiguration().update(ScriptsViewProvider.internalRunLocationOverridesConfigKey, overrides, vscode.ConfigurationTarget.Workspace);
+        await (0, config_1.updateConfig)({ internalRunLocationOverrides: overrides });
     }
     async setScriptAlwaysNewOverride(workspacePath, scriptName, enabled) {
-        const key = this.getPersistentTerminalKey(workspacePath, scriptName);
-        const overrides = { ...this.getInternalRunAlwaysNewOverrides() };
+        const config = (0, config_1.readConfig)();
+        const overrides = { ...(0, config_1.normalizeAlwaysNewOverrides)(config) };
+        const key = getPersistentTerminalKey(workspacePath, scriptName);
         overrides[key] = enabled;
-        await vscode.workspace.getConfiguration().update(ScriptsViewProvider.internalRunAlwaysNewOverridesConfigKey, overrides, vscode.ConfigurationTarget.Workspace);
-    }
-    async togglePrimaryClickTarget() {
-        const next = this.getPrimaryClickTarget() === 'internal' ? 'external' : 'internal';
-        await vscode.workspace.getConfiguration().update(ScriptsViewProvider.primaryClickTargetConfigKey, next, vscode.ConfigurationTarget.Workspace);
-    }
-    async toggleInternalRunMode() {
-        const next = this.getInternalRunMode() === 'dedicated' ? 'perScript' : 'dedicated';
-        await vscode.workspace.getConfiguration().update(ScriptsViewProvider.internalRunModeConfigKey, next, vscode.ConfigurationTarget.Workspace);
-    }
-    async toggleInternalRunLocation() {
-        const next = this.getInternalRunLocation() === 'panel' ? 'editor' : 'panel';
-        await vscode.workspace.getConfiguration().update(ScriptsViewProvider.internalRunLocationConfigKey, next, vscode.ConfigurationTarget.Workspace);
-    }
-    async toggleInternalRunPreserveFocus() {
-        await vscode.workspace.getConfiguration().update(ScriptsViewProvider.internalRunPreserveFocusConfigKey, !this.getInternalRunPreserveFocus(), vscode.ConfigurationTarget.Workspace);
-    }
-    async toggleInternalRunOpenNewWhenBusy() {
-        await vscode.workspace.getConfiguration().update(ScriptsViewProvider.internalRunOpenNewWhenBusyConfigKey, !this.getInternalRunOpenNewWhenBusy(), vscode.ConfigurationTarget.Workspace);
-    }
-    async toggleEnvNameEnabled() {
-        await vscode.workspace.getConfiguration().update(ScriptsViewProvider.envNameEnabledConfigKey, !this.getEnvNameEnabled(), vscode.ConfigurationTarget.Workspace);
-    }
-    async toggleEnvNameSource() {
-        await vscode.workspace.getConfiguration().update(ScriptsViewProvider.envNameUseWorkspaceFolderNameConfigKey, !this.getUseWorkspaceFolderName(), vscode.ConfigurationTarget.Workspace);
-    }
-    isAutoTerminalStyleEnabledGlobally() {
-        const includeScripts = this.getPersistentTerminalIncludeScripts();
-        const excludeScripts = this.getPersistentTerminalExcludeScripts();
-        return includeScripts.length === 1 && includeScripts[0] === '*' && excludeScripts.length === 0;
-    }
-    async toggleAutoTerminalStyleEnabledGlobally() {
-        const enabled = this.isAutoTerminalStyleEnabledGlobally();
-        const configuration = vscode.workspace.getConfiguration();
-        if (enabled) {
-            await configuration.update(ScriptsViewProvider.persistentTerminalIncludeScriptsConfigKey, [], vscode.ConfigurationTarget.Workspace);
-            await configuration.update(ScriptsViewProvider.persistentTerminalExcludeScriptsConfigKey, [], vscode.ConfigurationTarget.Workspace);
-            return;
-        }
-        await configuration.update(ScriptsViewProvider.persistentTerminalIncludeScriptsConfigKey, ['*'], vscode.ConfigurationTarget.Workspace);
-        await configuration.update(ScriptsViewProvider.persistentTerminalExcludeScriptsConfigKey, [], vscode.ConfigurationTarget.Workspace);
-    }
-    async toggleCustomFavoriteCommandsEnabled() {
-        await vscode.workspace.getConfiguration().update(ScriptsViewProvider.customFavoriteCommandsEnabledConfigKey, !this.getCustomFavoriteCommandsEnabled(), vscode.ConfigurationTarget.Workspace);
-    }
-    async openUserSettingsJson() {
-        try {
-            await vscode.commands.executeCommand('workbench.action.openApplicationSettingsJson');
-        }
-        catch {
-            await vscode.commands.executeCommand('workbench.action.openSettingsJson');
-        }
-    }
-    async toggleQuickActionVisibility() {
-        const current = this.getActionVisibility();
-        const selected = await vscode.window.showQuickPick([
-            { label: 'Open script in package.json', picked: current.openScript, key: ScriptsViewProvider.actionVisibilityOpenScriptConfigKey },
-            { label: 'Run in secondary location', picked: current.runSecondary, key: ScriptsViewProvider.actionVisibilityRunSecondaryConfigKey },
-            { label: 'Run in external window', picked: current.runExternal, key: ScriptsViewProvider.actionVisibilityRunExternalConfigKey },
-            {
-                label: 'Open external tab and copy command',
-                picked: current.openExternalTabCopyCommand,
-                key: ScriptsViewProvider.actionVisibilityOpenExternalTabCopyCommandConfigKey,
-            },
-            { label: 'Favorite', picked: current.favorite, key: ScriptsViewProvider.actionVisibilityFavoriteConfigKey },
-        ], {
-            canPickMany: true,
-            placeHolder: 'Select row action buttons to show (selected = visible)',
-            ignoreFocusOut: false,
-        });
-        if (!selected) {
-            return;
-        }
-        const selectedKeys = new Set(selected.map((item) => item.key));
-        const updates = [
-            { key: ScriptsViewProvider.actionVisibilityOpenScriptConfigKey, value: selectedKeys.has(ScriptsViewProvider.actionVisibilityOpenScriptConfigKey) },
-            { key: ScriptsViewProvider.actionVisibilityRunSecondaryConfigKey, value: selectedKeys.has(ScriptsViewProvider.actionVisibilityRunSecondaryConfigKey) },
-            { key: ScriptsViewProvider.actionVisibilityRunExternalConfigKey, value: selectedKeys.has(ScriptsViewProvider.actionVisibilityRunExternalConfigKey) },
-            {
-                key: ScriptsViewProvider.actionVisibilityOpenExternalTabCopyCommandConfigKey,
-                value: selectedKeys.has(ScriptsViewProvider.actionVisibilityOpenExternalTabCopyCommandConfigKey),
-            },
-            { key: ScriptsViewProvider.actionVisibilityFavoriteConfigKey, value: selectedKeys.has(ScriptsViewProvider.actionVisibilityFavoriteConfigKey) },
-        ];
-        for (const update of updates) {
-            await vscode.workspace.getConfiguration().update(update.key, update.value, vscode.ConfigurationTarget.Workspace);
-        }
-    }
-    didRelevantConfigChange(event) {
-        const keys = [
-            ScriptsViewProvider.envNameDefaultConfigKey,
-            ScriptsViewProvider.envNameUseWorkspaceFolderNameConfigKey,
-            ScriptsViewProvider.envNameEnabledConfigKey,
-            ScriptsViewProvider.customFavoriteCommandsEnabledConfigKey,
-            ScriptsViewProvider.customFavoriteCommandsEntriesConfigKey,
-            ScriptsViewProvider.envNameIncludeScriptsConfigKey,
-            ScriptsViewProvider.envNameExcludeScriptsConfigKey,
-            ScriptsViewProvider.internalRunModeConfigKey,
-            ScriptsViewProvider.internalRunIncludeScriptsConfigKey,
-            ScriptsViewProvider.internalRunExcludeScriptsConfigKey,
-            ScriptsViewProvider.internalRunLocationConfigKey,
-            ScriptsViewProvider.internalRunLocationOverridesConfigKey,
-            ScriptsViewProvider.internalRunPreserveFocusConfigKey,
-            ScriptsViewProvider.internalRunOpenNewWhenBusyConfigKey,
-            ScriptsViewProvider.persistentTerminalOverridesConfigKey,
-            ScriptsViewProvider.persistentTerminalIncludeScriptsConfigKey,
-            ScriptsViewProvider.persistentTerminalExcludeScriptsConfigKey,
-            ScriptsViewProvider.persistentTerminalDefaultColorsConfigKey,
-            ScriptsViewProvider.primaryClickTargetConfigKey,
-            ScriptsViewProvider.internalRunAlwaysNewOverridesConfigKey,
-            ScriptsViewProvider.actionVisibilityOpenScriptConfigKey,
-            ScriptsViewProvider.actionVisibilityRunSecondaryConfigKey,
-            ScriptsViewProvider.actionVisibilityRunExternalConfigKey,
-            ScriptsViewProvider.actionVisibilityOpenExternalTabCopyCommandConfigKey,
-            ScriptsViewProvider.actionVisibilityFavoriteConfigKey,
-        ];
-        return keys.some((key) => event.affectsConfiguration(key));
-    }
-    getConfigurationDescription(configKey, fallback) {
-        const extension = vscode.extensions.all.find((candidate) => candidate.extensionUri.fsPath === this.extensionUri.fsPath);
-        const properties = extension?.packageJSON?.contributes?.configuration?.properties;
-        const description = properties?.[configKey]?.description;
-        if (typeof description === 'string' && description.trim().length > 0) {
-            return description;
-        }
-        return fallback;
+        await (0, config_1.updateConfig)({ internalRunAlwaysNewOverrides: overrides });
     }
 }
 exports.ScriptsViewProvider = ScriptsViewProvider;
+function getPersistentTerminalKey(workspacePath, scriptName) {
+    return `${workspacePath}::${scriptName}`;
+}
 function getNonce() {
     let text = '';
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';

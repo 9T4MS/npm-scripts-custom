@@ -39,17 +39,20 @@ const vscode = __importStar(require("vscode"));
 const ScriptsViewProvider_1 = require("./ScriptsViewProvider");
 const stateManager_1 = require("./stateManager");
 const terminalManager_1 = require("./terminalManager");
+const configMigration_1 = require("./configMigration");
 function activate(context) {
     let rootPaths = vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath) ?? [];
     if (rootPaths.length === 0) {
         return;
     }
+    // Migrate v0.1.x dotted settings to v0.2.0 single-object format (fire-and-forget)
+    void (0, configMigration_1.migrateLegacyConfig)();
     const stateManager = (0, stateManager_1.createStateManager)(context.workspaceState, context.globalState);
     const terminalManager = (0, terminalManager_1.createTerminalManager)();
     const provider = new ScriptsViewProvider_1.ScriptsViewProvider(context.extensionUri, rootPaths, stateManager, terminalManager);
     context.subscriptions.push(vscode.window.registerWebviewViewProvider(ScriptsViewProvider_1.ScriptsViewProvider.viewType, provider, {
         webviewOptions: { retainContextWhenHidden: true },
-    }), vscode.commands.registerCommand('latooScripts.quickSettings', () => provider.showQuickSettings()), vscode.commands.registerCommand('latooScripts.refresh', () => provider.refresh()), terminalManager);
+    }), vscode.commands.registerCommand('latooScripts.quickSettings', () => provider.showQuickSettings()), vscode.commands.registerCommand('latooScripts.refresh', () => provider.refresh()), terminalManager, { dispose: () => provider.dispose() });
     // Watch for package.json changes to auto-refresh
     const watcher = vscode.workspace.createFileSystemWatcher('**/package.json');
     watcher.onDidChange(() => provider.refresh());

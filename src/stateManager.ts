@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
-import { FavoriteEntry, StateManager } from './types';
+import { CustomFavoriteEntry, FavoriteEntry, StateManager } from './types';
 
 const LEGACY_FAVORITES_KEY = 'latooScripts.favorites';
 const FAVORITES_KEY_PREFIX = 'latooScripts.favorites.';
 const FAVORITES_SECTION_ORDER_KEY_PREFIX = 'latooScripts.favoritesSectionOrder.';
 const TAB_ORDER_KEY = 'latooScripts.tabOrder';
+const CUSTOM_FAVORITES_KEY_PREFIX = 'latooScripts.customFavoriteCommands.';
 
 export function createStateManager(
   workspaceState: vscode.Memento,
@@ -18,6 +19,27 @@ export function createStateManager(
 
   function getFavoritesSectionOrderKey(): string {
     return `${FAVORITES_SECTION_ORDER_KEY_PREFIX}${favoritesScopeId}`;
+  }
+
+  function getCustomFavoritesKey(): string {
+    return `${CUSTOM_FAVORITES_KEY_PREFIX}${favoritesScopeId}`;
+  }
+
+  function normalizeCustomFavoriteEntries(entries: unknown): CustomFavoriteEntry[] {
+    if (!Array.isArray(entries)) { return []; }
+    const result: CustomFavoriteEntry[] = [];
+    const seen = new Set<string>();
+    for (const entry of entries) {
+      if (!entry || typeof entry !== 'object') { continue; }
+      const name = typeof Reflect.get(entry, 'name') === 'string' ? (Reflect.get(entry, 'name') as string).trim() : '';
+      const command = typeof Reflect.get(entry, 'command') === 'string' ? (Reflect.get(entry, 'command') as string).trim() : '';
+      if (name.length === 0 || command.length === 0) { continue; }
+      if (seen.has(name)) { continue; }
+      seen.add(name);
+      const iconId = typeof Reflect.get(entry, 'iconId') === 'string' ? (Reflect.get(entry, 'iconId') as string).trim() : '';
+      result.push({ name, command, iconId: iconId.length > 0 ? iconId : undefined });
+    }
+    return result;
   }
 
   function normalizeFavoriteEntries(entries: unknown): FavoriteEntry[] {
@@ -127,6 +149,17 @@ export function createStateManager(
 
     setTabOrder(order: string[]): void {
       workspaceState.update(TAB_ORDER_KEY, order);
+    },
+
+    getCustomFavoriteCommands(): CustomFavoriteEntry[] {
+      return normalizeCustomFavoriteEntries(
+        globalState.get<unknown>(getCustomFavoritesKey(), [])
+      );
+    },
+
+    setCustomFavoriteCommands(entries: CustomFavoriteEntry[]): void {
+      const normalized = normalizeCustomFavoriteEntries(entries);
+      globalState.update(getCustomFavoritesKey(), normalized);
     },
   };
 }

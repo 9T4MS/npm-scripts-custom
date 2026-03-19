@@ -2,7 +2,7 @@
   "name": "latoo-scripts",
   "displayName": "Latoo Scripts",
   "description": "Company npm script runner with tabbed workspace UI, favorites, and drag-to-reorder",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "9T4MS",
   "license": "MIT",
   "repository": {
@@ -71,181 +71,165 @@
     "configuration": {
       "title": "Latoo Scripts",
       "properties": {
-        "latooScripts.externalRun.commandTemplate": {
-          "type": "string",
-          "default": "open \"warp://action/new_tab?path={workspacePathUri}&command={runCommandUri}\"",
-          "description": "Shell command template used by the 'Run in external window' action. When this is left at the default Warp URI template, the extension uses a Warp Launch Configuration so the command executes immediately. The separate 'Open external tab and copy command' action always opens a Warp tab at workspacePath and copies runCommand. Custom templates run as-is. Placeholders: {workspacePath}, {scriptName}, {packageManager}, {runCommand}, {envName}, plus *Escaped and *Uri variants."
-        },
-        "latooScripts.envName.default": {
-          "type": "string",
-          "default": "local-0",
-          "description": "Default envName value used by script runs and external command templates."
-        },
-        "latooScripts.envName.useWorkspaceFolderName": {
-          "type": "boolean",
-          "default": true,
-          "description": "When enabled, envName follows the active workspace folder name only for Git worktree folders; otherwise it falls back to envName.default."
-        },
-        "latooScripts.envName.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Controls whether envName is shown as a hint in the Latoo Scripts view header. Edit envName via settings (latooScripts.envName.default and latooScripts.envName.useWorkspaceFolderName)."
-        },
-        "latooScripts.customFavoriteCommands.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Shows configurable always-on-top custom favorite command entries in the Favorites tab."
-        },
-        "latooScripts.customFavoriteCommands.entries": {
-          "type": "array",
-          "items": {
-            "type": "object"
+        "latooScripts": {
+          "type": "object",
+          "description": "All Latoo Scripts configuration. Properties are shallow-merged across settings scopes (Global > Workspace > Folder), so you can set shared defaults globally and override specific properties per workspace.",
+          "default": {
+            "primaryClickTarget": "internal",
+            "externalRunCommandTemplate": "open \"warp://action/new_tab?path={workspacePathUri}&command={runCommandUri}\"",
+            "internalRunMode": "perScript",
+            "internalRunLocation": "panel",
+            "internalRunPreserveFocus": true,
+            "internalRunOpenNewWhenBusy": true,
+            "internalRunLocationOverrides": {},
+            "internalRunAlwaysNewOverrides": {},
+            "internalRunIncludeScripts": ["*"],
+            "internalRunExcludeScripts": [],
+            "envNameDefault": "local-0",
+            "envNameUseWorkspaceFolderName": true,
+            "envNameEnabled": true,
+            "envNameIncludeScripts": ["*"],
+            "envNameExcludeScripts": [],
+            "persistentTerminalOverrides": {},
+            "persistentTerminalDefaultColors": [
+              "terminal.ansiBlue", "terminal.ansiCyan", "terminal.ansiGreen",
+              "terminal.ansiMagenta", "terminal.ansiYellow", "terminal.ansiRed"
+            ],
+            "persistentTerminalIncludeScripts": ["*"],
+            "persistentTerminalExcludeScripts": [],
+            "showOpenScript": false,
+            "showRunSecondary": true,
+            "showRunExternal": true,
+            "showOpenExternalTabCopyCommand": false,
+            "showFavorite": true,
+            "customFavoriteCommandsEnabled": true,
+            "customFavoriteCommands": []
           },
-          "default": [
-            {
-              "name": "claude",
-              "command": "claude",
-              "iconId": "claude-code"
+          "properties": {
+            "primaryClickTarget": {
+              "type": "string",
+              "enum": ["internal", "external"],
+              "description": "Controls script row primary click. 'internal' runs in internal terminal, 'external' runs via external command template."
+            },
+            "externalRunCommandTemplate": {
+              "type": "string",
+              "description": "Shell command template for 'Run in external window'. Placeholders: {workspacePath}, {scriptName}, {packageManager}, {runCommand}, {envName}, plus *Escaped and *Uri variants."
+            },
+            "internalRunMode": {
+              "type": "string",
+              "enum": ["dedicated", "perScript"],
+              "description": "'dedicated' reuses one terminal for all runs; 'perScript' creates/reuses a terminal per workspace and script."
+            },
+            "internalRunLocation": {
+              "type": "string",
+              "enum": ["panel", "editor"],
+              "description": "Primary internal run location. 'panel' = terminal panel, 'editor' = terminal editor area."
+            },
+            "internalRunPreserveFocus": {
+              "type": "boolean",
+              "description": "When true, running a script does not steal focus from the editor."
+            },
+            "internalRunOpenNewWhenBusy": {
+              "type": "boolean",
+              "description": "When true, if terminal is busy, a new overflow terminal is created. Requires VS Code 1.93+."
+            },
+            "internalRunLocationOverrides": {
+              "type": "object",
+              "description": "Per-script location overrides. Key: '<workspacePath>::<scriptName>'. Value: 'panel' or 'editor'."
+            },
+            "internalRunAlwaysNewOverrides": {
+              "type": "object",
+              "description": "Per-script override for always opening a new terminal. Key: '<workspacePath>::<scriptName>'. Value: true/false."
+            },
+            "internalRunIncludeScripts": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Scripts that use internal run behavior settings. Supports * wildcards and '<workspacePath>::<script>' patterns."
+            },
+            "internalRunExcludeScripts": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Scripts excluded from internal run behavior. Exclude overrides include."
+            },
+            "envNameDefault": {
+              "type": "string",
+              "description": "Default envName value used by script runs and external command templates."
+            },
+            "envNameUseWorkspaceFolderName": {
+              "type": "boolean",
+              "description": "When enabled, envName follows workspace folder name for git worktree folders."
+            },
+            "envNameEnabled": {
+              "type": "boolean",
+              "description": "Shows envName hint in the Latoo Scripts view header."
+            },
+            "envNameIncludeScripts": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Scripts that receive automatic envName injection. Default ['*'] applies to all."
+            },
+            "envNameExcludeScripts": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Scripts excluded from envName injection. Exclude overrides include."
+            },
+            "persistentTerminalOverrides": {
+              "type": "object",
+              "description": "Per-script terminal style overrides. Key: '<workspacePath>::<scriptName>'. Value: { name, color }."
+            },
+            "persistentTerminalDefaultColors": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Color palette for auto-picking per-script terminal colors."
+            },
+            "persistentTerminalIncludeScripts": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Scripts that use persistent terminal naming/color. Default ['*']."
+            },
+            "persistentTerminalExcludeScripts": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Scripts excluded from persistent terminal behavior."
+            },
+            "showOpenScript": {
+              "type": "boolean",
+              "description": "Show 'Open script in package.json' action button."
+            },
+            "showRunSecondary": {
+              "type": "boolean",
+              "description": "Show secondary run-location action button."
+            },
+            "showRunExternal": {
+              "type": "boolean",
+              "description": "Show 'Run in external window' action button."
+            },
+            "showOpenExternalTabCopyCommand": {
+              "type": "boolean",
+              "description": "Show 'Open external tab and copy command' action button."
+            },
+            "showFavorite": {
+              "type": "boolean",
+              "description": "Show favorite star action button."
+            },
+            "customFavoriteCommandsEnabled": {
+              "type": "boolean",
+              "description": "Show custom favorite command entries in Favorites tab."
+            },
+            "customFavoriteCommands": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "command": { "type": "string" },
+                  "iconId": { "type": "string" }
+                },
+                "required": ["name", "command"]
+              },
+              "description": "Custom favorite commands (VS Code settings override). Merged with shared project commands — settings entries win on name conflict."
             }
-          ],
-          "description": "Custom favorite commands shown above regular favorites. Each entry supports { \"name\": \"Label\", \"command\": \"shell command\", \"iconId\": \"optional icon id\" } and runs from workspace root."
-        },
-        "latooScripts.envName.includeScripts": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [
-            "*"
-          ],
-          "description": "Controls which scripts receive automatic envName injection when running scripts. Supports * wildcard patterns and optional <workspacePathPattern>::<scriptPattern> entries. Default ['*'] applies to all scripts."
-        },
-        "latooScripts.envName.excludeScripts": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [],
-          "description": "Excludes scripts from automatic envName injection. Supports * wildcard patterns and optional <workspacePathPattern>::<scriptPattern> entries. Exclude patterns override include patterns."
-        },
-        "latooScripts.internalRun.mode": {
-          "type": "string",
-          "enum": ["dedicated", "perScript"],
-          "default": "perScript",
-          "description": "Internal run mode: 'dedicated' reuses one terminal tab (Latoo Scripts • Runner) for all script runs; 'perScript' creates or reuses a terminal per workspace folder and script name."
-        },
-        "latooScripts.internalRun.includeScripts": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [
-            "*"
-          ],
-          "description": "Controls which scripts use internal run behavior settings (mode/location/preserveFocus/openNewWhenBusy). Supports * wildcard patterns and optional <workspacePathPattern>::<scriptPattern> entries."
-        },
-        "latooScripts.internalRun.excludeScripts": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [],
-          "description": "Excludes scripts from internal run behavior settings. Supports * wildcard patterns and optional <workspacePathPattern>::<scriptPattern> entries. Exclude patterns override include patterns."
-        },
-        "latooScripts.internalRun.location": {
-          "type": "string",
-          "enum": ["panel", "editor"],
-          "default": "panel",
-          "description": "Primary internal run location used on script row click. 'panel' opens in the terminal panel, 'editor' opens in the terminal editor area."
-        },
-        "latooScripts.internalRun.locationOverrides": {
-          "type": "object",
-          "default": {},
-          "description": "Optional per-script primary internal run location overrides. Key format: <workspacePath>::<scriptName>. Value: \"panel\" or \"editor\"."
-        },
-        "latooScripts.internalRun.preserveFocus": {
-          "type": "boolean",
-          "default": true,
-          "description": "When true, running a script does not steal focus from the editor; when false, focus moves to the terminal."
-        },
-        "latooScripts.internalRun.openNewWhenBusy": {
-          "type": "boolean",
-          "default": true,
-          "description": "When true, if the runner terminal is busy (a command is still executing), a new overflow terminal is created instead of interrupting the running process. Requires VS Code 1.93+ with shell integration enabled; on older versions the setting has no effect."
-        },
-        "latooScripts.persistentTerminal.overrides": {
-          "type": "object",
-          "default": {},
-          "description": "Optional per-script internal terminal style overrides. Key format: <workspacePath>::<scriptName>. Value: { \"name\": \"My Dev\", \"color\": \"terminal.ansiBlue\" }."
-        },
-        "latooScripts.persistentTerminal.includeScripts": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [
-            "*"
-          ],
-          "description": "Controls which scripts use persistent terminal naming/color behavior. Supports * wildcard patterns and optional <workspacePathPattern>::<scriptPattern> entries."
-        },
-        "latooScripts.persistentTerminal.excludeScripts": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [],
-          "description": "Excludes scripts from persistent terminal naming/color behavior. Supports * wildcard patterns and optional <workspacePathPattern>::<scriptPattern> entries. Exclude patterns override include patterns."
-        },
-        "latooScripts.persistentTerminal.defaultColors": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [
-            "terminal.ansiBlue",
-            "terminal.ansiCyan",
-            "terminal.ansiGreen",
-            "terminal.ansiMagenta",
-            "terminal.ansiYellow",
-            "terminal.ansiRed"
-          ],
-          "description": "Palette used to auto-pick per-script internal terminal colors when no override is configured."
-        },
-        "latooScripts.actions.showOpenScript": {
-          "type": "boolean",
-          "default": false,
-          "description": "Shows or hides the 'Open script in package.json' action button in each script row."
-        },
-        "latooScripts.actions.showRunSecondary": {
-          "type": "boolean",
-          "default": true,
-          "description": "Shows or hides the secondary run-location action button in each script row."
-        },
-        "latooScripts.actions.showRunExternal": {
-          "type": "boolean",
-          "default": true,
-          "description": "Shows or hides the 'Run in external window' action button in each script row."
-        },
-        "latooScripts.actions.showOpenExternalTabCopyCommand": {
-          "type": "boolean",
-          "default": false,
-          "description": "Shows or hides the 'Open external tab and copy command' action button in each script row."
-        },
-        "latooScripts.actions.showFavorite": {
-          "type": "boolean",
-          "default": true,
-          "description": "Shows or hides the favorite star action button in each script row."
-        },
-        "latooScripts.primaryClick.target": {
-          "type": "string",
-          "enum": ["internal", "external"],
-          "default": "internal",
-          "description": "Controls script row primary click behavior. 'internal' runs in internal terminal flow, 'external' runs via external run command template."
-        },
-        "latooScripts.internalRun.alwaysNewOverrides": {
-          "type": "object",
-          "default": {},
-          "description": "Optional per-script override for always opening a new internal terminal. Key format: <workspacePath>::<scriptName>. Value: true/false."
+          }
         }
       }
     }

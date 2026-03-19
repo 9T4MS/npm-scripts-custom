@@ -5,6 +5,7 @@ const LEGACY_FAVORITES_KEY = 'latooScripts.favorites';
 const FAVORITES_KEY_PREFIX = 'latooScripts.favorites.';
 const FAVORITES_SECTION_ORDER_KEY_PREFIX = 'latooScripts.favoritesSectionOrder.';
 const TAB_ORDER_KEY = 'latooScripts.tabOrder';
+const CUSTOM_FAVORITES_KEY_PREFIX = 'latooScripts.customFavoriteCommands.';
 function createStateManager(workspaceState, globalState) {
     let favoritesScopeId = 'default';
     function getFavoritesKey() {
@@ -12,6 +13,33 @@ function createStateManager(workspaceState, globalState) {
     }
     function getFavoritesSectionOrderKey() {
         return `${FAVORITES_SECTION_ORDER_KEY_PREFIX}${favoritesScopeId}`;
+    }
+    function getCustomFavoritesKey() {
+        return `${CUSTOM_FAVORITES_KEY_PREFIX}${favoritesScopeId}`;
+    }
+    function normalizeCustomFavoriteEntries(entries) {
+        if (!Array.isArray(entries)) {
+            return [];
+        }
+        const result = [];
+        const seen = new Set();
+        for (const entry of entries) {
+            if (!entry || typeof entry !== 'object') {
+                continue;
+            }
+            const name = typeof Reflect.get(entry, 'name') === 'string' ? Reflect.get(entry, 'name').trim() : '';
+            const command = typeof Reflect.get(entry, 'command') === 'string' ? Reflect.get(entry, 'command').trim() : '';
+            if (name.length === 0 || command.length === 0) {
+                continue;
+            }
+            if (seen.has(name)) {
+                continue;
+            }
+            seen.add(name);
+            const iconId = typeof Reflect.get(entry, 'iconId') === 'string' ? Reflect.get(entry, 'iconId').trim() : '';
+            result.push({ name, command, iconId: iconId.length > 0 ? iconId : undefined });
+        }
+        return result;
     }
     function normalizeFavoriteEntries(entries) {
         if (!Array.isArray(entries)) {
@@ -107,6 +135,13 @@ function createStateManager(workspaceState, globalState) {
         },
         setTabOrder(order) {
             workspaceState.update(TAB_ORDER_KEY, order);
+        },
+        getCustomFavoriteCommands() {
+            return normalizeCustomFavoriteEntries(globalState.get(getCustomFavoritesKey(), []));
+        },
+        setCustomFavoriteCommands(entries) {
+            const normalized = normalizeCustomFavoriteEntries(entries);
+            globalState.update(getCustomFavoritesKey(), normalized);
         },
     };
 }

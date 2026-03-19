@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as fs from 'fs/promises';
 import { createHash } from 'crypto';
 import { exec } from 'child_process';
-import { TerminalManager as ITerminalManager, InternalRunOptions } from './types';
+import { TerminalManager as ITerminalManager, InternalRunOptions, RunParams } from './types';
 
 const defaultExternalRunCommandTemplate =
   'open "warp://action/new_tab?path={workspacePathUri}&command={runCommandUri}"';
@@ -43,16 +43,9 @@ export function createTerminalManager(): ITerminalManager {
     : undefined;
 
   return {
-    run(
-      workspacePath: string,
-      scriptName: string,
-      scriptCommand: string,
-      isRawCommand: boolean,
-      packageManager: string,
-      envName: string,
-      injectEnvName: boolean,
-      options: InternalRunOptions
-    ): void {
+    run(params: RunParams, options: InternalRunOptions): void {
+      const { workspacePath, scriptName, scriptCommand, isRawCommand, packageManager, envName, injectEnvName } =
+        params;
       const key = getTerminalKey(workspacePath, scriptName, options);
       const terminalName = getTerminalDisplayName(workspacePath, scriptName, options);
       const terminalColor = toTerminalThemeColor(options.terminalStyle?.color);
@@ -138,16 +131,9 @@ export function createTerminalManager(): ITerminalManager {
       activeRunContextByTerminal.set(terminal, { key, workspacePath, scriptName });
     },
 
-    runExternal(
-      workspacePath: string,
-      scriptName: string,
-      scriptCommand: string,
-      isRawCommand: boolean,
-      packageManager: string,
-      envName: string,
-      injectEnvName: boolean,
-      commandTemplate: string
-    ): void {
+    runExternal(params: RunParams, commandTemplate: string): void {
+      const { workspacePath, scriptName, scriptCommand, isRawCommand, packageManager, envName, injectEnvName } =
+        params;
       const runCommand = buildRunCommand(
         workspacePath,
         scriptName,
@@ -173,15 +159,9 @@ export function createTerminalManager(): ITerminalManager {
       executeExternalCommand(command, workspacePath, envName, true);
     },
 
-    openExternalTabCopyCommand(
-      workspacePath: string,
-      scriptName: string,
-      scriptCommand: string,
-      isRawCommand: boolean,
-      packageManager: string,
-      envName: string,
-      injectEnvName: boolean
-    ): void {
+    openExternalTabCopyCommand(params: RunParams): void {
+      const { workspacePath, scriptName, scriptCommand, isRawCommand, packageManager, envName, injectEnvName } =
+        params;
       const runCommand = buildRunCommand(
         workspacePath,
         scriptName,
@@ -486,24 +466,13 @@ async function runWarpLaunchConfigCleanup(excludeName: string): Promise<void> {
           continue;
         }
         await fs.unlink(filePath);
-      } catch (err) {
-        if (!isIgnorableUnlinkError(err)) {
-          // Ignore stat/read race errors so launch path is never blocked
-        }
+      } catch {
         continue;
       }
     }
   } catch {
     // Never throw from cleanup path
   }
-}
-
-function isIgnorableUnlinkError(err: unknown): boolean {
-  if (err && typeof err === 'object' && 'code' in err && typeof (err as NodeJS.ErrnoException).code === 'string') {
-    const code = (err as NodeJS.ErrnoException).code;
-    return code === 'ENOENT' || code === 'EBUSY' || code === 'EPERM';
-  }
-  return false;
 }
 
 function buildWarpLaunchConfigurationYaml(
