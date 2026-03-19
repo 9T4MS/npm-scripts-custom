@@ -29,9 +29,6 @@
     "latooScripts.envName.enabled": true,
     "latooScripts.envName.useWorkspaceFolderName": true,
     "latooScripts.internalRun.preserveFocus": false,
-    "latooScripts.primaryClick.scriptOverrides": {
-        "/Users/mike/Developer/_dev/npm-scripts-custom::claude": "external"
-    },
     "latooScripts.internalRun.alwaysNewOverrides": {
         "/Users/mike/Developer/_dev/npm-scripts-custom::claude": true
     },

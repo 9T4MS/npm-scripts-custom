@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.detectPackageManager = detectPackageManager;
 exports.scanWorkspaces = scanWorkspaces;
 exports.scanWorkspaceFolders = scanWorkspaceFolders;
+const vscode = __importStar(require("vscode"));
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const ignoredDirNames = new Set([
@@ -67,6 +68,10 @@ function detectPackageManager(rootPath) {
     }
     if (fs.existsSync(path.join(rootPath, 'bun.lockb'))) {
         return 'bun';
+    }
+    const vscodeSetting = vscode.workspace.getConfiguration('npm').get('packageManager');
+    if (vscodeSetting && /^(pnpm|npm|yarn|bun)$/.test(vscodeSetting)) {
+        return vscodeSetting;
     }
     return 'npm';
 }

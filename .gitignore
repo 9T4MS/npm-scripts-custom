@@ -15,3 +15,9 @@ pnpm-debug.log*
 
 # OS files
 .DS_Store
+
+# VS Code settings
+.vscode/settings.json
+
+# AI files
+ai/

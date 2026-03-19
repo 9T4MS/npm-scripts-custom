@@ -36,7 +36,9 @@ export function createTerminalManager(): ITerminalManager {
   const endDisposable = vscode.window.onDidEndTerminalShellExecution
     ? vscode.window.onDidEndTerminalShellExecution((event: { terminal: vscode.Terminal }) => {
         busyTerminals.delete(event.terminal);
-        activeRunContextByTerminal.delete(event.terminal);
+        // Keep activeRunContextByTerminal — it tracks which script owns the terminal,
+        // not whether the shell command is still executing. Cleared on terminal close
+        // or when a different script is sent to the same terminal.
       })
     : undefined;
 
@@ -80,12 +82,13 @@ export function createTerminalManager(): ITerminalManager {
         return;
       }
 
-      // Busy-aware: spawn overflow terminal instead of interrupting
-      if (terminal && busyTerminals.has(terminal)) {
+      if (terminal) {
         const activeContext = activeRunContextByTerminal.get(terminal);
         const isSameRunningScript = activeContext?.key === key
           && activeContext.workspacePath === workspacePath
           && activeContext.scriptName === scriptName;
+
+        // Same script re-triggered in its terminal — prompt to restart or close
         if (isSameRunningScript) {
           void promptForBusyScriptAction({
             key,
@@ -99,7 +102,9 @@ export function createTerminalManager(): ITerminalManager {
           });
           return;
         }
-        if (options.openNewWhenBusy) {
+
+        // Different script in a busy terminal — spawn overflow instead of interrupting
+        if (busyTerminals.has(terminal) && options.openNewWhenBusy) {
           overflowCounter++;
           const overflow = createManagedTerminal({
             name: `${terminalName} #${overflowCounter}`,

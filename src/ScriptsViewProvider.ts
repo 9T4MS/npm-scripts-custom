@@ -334,7 +334,6 @@ export class ScriptsViewProvider implements vscode.WebviewViewProvider {
     this.worktreeByRootPath.clear();
     this.favoritesScopeId = this.createFavoritesScopeId();
     this.stateManager.setFavoritesScope(this.favoritesScopeId);
-    this.terminalManager.disposeManagedEditorTerminals();
     this.sendUpdate();
   }
 

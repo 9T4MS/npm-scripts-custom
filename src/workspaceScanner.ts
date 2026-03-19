@@ -1,3 +1,4 @@
+import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { WorkspaceInfo, ScriptInfo } from './types';
@@ -25,6 +26,10 @@ export function detectPackageManager(rootPath: string): string {
   if (fs.existsSync(path.join(rootPath, 'pnpm-lock.yaml'))) { return 'pnpm'; }
   if (fs.existsSync(path.join(rootPath, 'yarn.lock'))) { return 'yarn'; }
   if (fs.existsSync(path.join(rootPath, 'bun.lockb'))) { return 'bun'; }
+
+  const vscodeSetting = vscode.workspace.getConfiguration('npm').get<string>('packageManager');
+  if (vscodeSetting && /^(pnpm|npm|yarn|bun)$/.test(vscodeSetting)) { return vscodeSetting; }
+
   return 'npm';
 }
 
