@@ -750,7 +750,9 @@ function createScriptRow(script, ws) {
   row.tabIndex = 0;
 
   const isFav = state.favorites.some(
-    (f) => f.workspacePath === ws.path && f.scriptName === script.name
+    (f) =>
+      f.scriptName === script.name &&
+      (f.workspacePath === ws.path || (f.workspaceName && f.workspaceName === ws.name))
   );
 
   const meta = document.createElement('div');

@@ -226,15 +226,11 @@ async function addCustomFavoriteCommand(stateManager, entries) {
     if (!command || command.trim().length === 0) {
         return;
     }
-    const iconId = await vscode.window.showInputBox({
-        prompt: 'Icon ID (optional, leave blank for default)',
-        placeHolder: 'e.g. claude-code',
-        ignoreFocusOut: true,
-    });
+    const iconId = await pickIconId();
     const newEntry = {
         name: name.trim(),
         command: command.trim(),
-        iconId: iconId && iconId.trim().length > 0 ? iconId.trim() : undefined,
+        iconId: iconId || undefined,
     };
     stateManager.setCustomFavoriteCommands([...entries, newEntry]);
 }
@@ -270,17 +266,37 @@ async function editOrRemoveCustomFavoriteCommand(stateManager, entries, entry, i
     if (!command || command.trim().length === 0) {
         return;
     }
-    const iconId = await vscode.window.showInputBox({
-        prompt: 'Icon ID (optional, leave blank for default)',
-        value: entry.iconId ?? '',
-        ignoreFocusOut: true,
-    });
+    const iconId = await pickIconId(entry.iconId);
     const updated = [...entries];
     updated[index] = {
         name: name.trim(),
         command: command.trim(),
-        iconId: iconId && iconId.trim().length > 0 ? iconId.trim() : undefined,
+        iconId: iconId || undefined,
     };
     stateManager.setCustomFavoriteCommands(updated);
+}
+const AVAILABLE_ICONS = [
+    'bun', 'claude-code', 'claude', 'clean', 'database', 'deploy', 'docker',
+    'eas', 'eslint', 'expo', 'graphql', 'i18n', 'jest', 'nest', 'npm', 'pnpm',
+    'playwright', 'prettier', 'prisma', 'preview', 'script', 'shell',
+    'storybook', 'tailwind', 'typescript', 'vite', 'vitest', 'watch', 'webpack', 'yarn',
+];
+async function pickIconId(currentIconId) {
+    const items = [
+        { label: '$(close) No icon (default)', value: '' },
+        ...AVAILABLE_ICONS.map((id) => ({
+            label: id === currentIconId ? `$(check) ${id}` : id,
+            value: id,
+        })),
+    ];
+    const selected = await vscode.window.showQuickPick(items, {
+        placeHolder: 'Select an icon (optional)',
+        ignoreFocusOut: true,
+    });
+    if (!selected) {
+        // User cancelled — keep current value
+        return currentIconId;
+    }
+    return selected.value.length > 0 ? selected.value : undefined;
 }
 //# sourceMappingURL=quickSettings.js.map
